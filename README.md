@@ -2,20 +2,20 @@
 
 A comprehensive employee monitoring and analytics dashboard built with **React**, **Vite**, and **Express**, using **PostgreSQL** for data persistence.
 
-## 🚀 Features
+## Features
 - **Real-time Analytics**: View productive, unproductive, and idle time.
 - **User Management**: Add, update, and manage dashboard users.
 - **Shift Tracking**: Monitor user activity across different shifts.
 - **Top Apps & Domains**: Visualize most used applications and websites.
 - **Interactive Charts**: Trends, KPIs, and efficiency breakdowns.
 
-## 🛠️ Tech Stack
+## Tech Stack
 - **Frontend**: React (Vite), Recharts, Lucide React, Tailwind CSS (via Index/App CSS).
 - **Backend**: Node.js, Express.
 - **Database**: PostgreSQL (Neon/Supabase).
 - **Deployment**: Vercel (Monorepo setup).
 
-## 🏃 Run Locally
+## Run Locally
 
 1. **Install Dependencies**
    ```bash
@@ -43,7 +43,7 @@ A comprehensive employee monitoring and analytics dashboard built with **React**
 
    *To run the server only:* `npm run server`
 
-## ☁️ Deployment (Vercel)
+## Deployment (Vercel)
 
 This project is configured for seamless deployment on Vercel.
 
