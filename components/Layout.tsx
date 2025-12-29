@@ -41,12 +41,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-slate-200 transition-all duration-300 flex flex-col shadow-sm z-30`}>
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shadow-lg shadow-blue-100">
-                 <span className="text-white font-bold italic">IC</span>
+            <div className="flex items-center gap-3">
+                <img src="/logo.jpeg" alt="Logo" className="h-14 w-auto object-contain mix-blend-multiply" />
+                <span className="text-2xl font-bold text-blue-600 tracking-tight">Immense Code</span>
               </div>
-              <span className="text-xl font-bold text-slate-700 tracking-tight">Immense Code</span>
-            </div>
           )}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
             {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
