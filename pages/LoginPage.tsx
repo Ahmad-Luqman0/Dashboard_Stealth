@@ -37,10 +37,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       <div className="w-full max-w-md p-8 bg-white rounded-3xl shadow-2xl border border-slate-100 relative z-10 mx-4">
         <div className="flex flex-col items-center mb-10 text-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 mb-6 rotate-3 hover:rotate-0 transition-transform cursor-pointer">
-            <span className="text-white text-2xl font-black italic">IC</span>
-          </div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Welcome Back</h1>
+          <img src="/logo.jpeg" alt="Logo" className="w-48 h-auto mb-6 hover:scale-105 transition-transform cursor-pointer mix-blend-multiply" />
+          <span className="text-5xl font-bold text-blue-600 tracking-tight mb-8">Immense Code</span>
+          <h1 className="text-xl font-bold text-slate-600 tracking-tight">Welcome Back</h1>
           <p className="text-slate-500 mt-2 text-sm">Enter your credentials to access the dashboard</p>
         </div>
 
