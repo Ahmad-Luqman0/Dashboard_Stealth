@@ -196,6 +196,7 @@ const ExecutiveDashboard: React.FC = () => {
   // Derived Data
   const totalUsers = Number(data?.registered_users || 0);
   const activeUsers = Number(data?.active_users || 0);
+  const loggedInUsers = Number(data?.logged_in_users || 0);
   const totalTime = Number(data?.total_time || 0);
   const productiveTime = Number(data?.productive_time || 0);
 
@@ -221,9 +222,9 @@ const ExecutiveDashboard: React.FC = () => {
       id: 'login',
       label: "Login", 
       target: totalUsers.toString(), 
-      actual: activeUsers.toString(), 
-      percentage: totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(2) : "0.00", 
-      status: activeUsers < totalUsers * 0.9 ? 'red' : 'green' 
+      actual: loggedInUsers.toString(), 
+      percentage: totalUsers > 0 ? ((loggedInUsers / totalUsers) * 100).toFixed(2) : "0.00", 
+      status: loggedInUsers < totalUsers * 0.9 ? 'red' : 'green' 
     },
     { 
       id: 'session',
@@ -476,9 +477,9 @@ const ExecutiveDashboard: React.FC = () => {
                                                {b.type === 'user' ? (
                                                     <thead className="text-slate-400 border-b border-slate-100">
                                                         <tr>
-                                                            <th className="py-2 text-left">User</th>
-                                                            <th className="py-2 text-left">Percentage Idle Time</th>
-                                                            <th className="py-2 text-left">Idle Minutes</th>
+                                                            <th className="py-2 text-left w-1/2">User</th>
+                                                            <th className="py-2 text-right w-1/4">Idle Minutes</th>
+                                                            <th className="py-2 text-right w-1/4">Percentage Idle Time</th>
                                                         </tr>
                                                     </thead>
                                                ) : (
@@ -508,8 +509,8 @@ const ExecutiveDashboard: React.FC = () => {
                                                                             {app.name}
                                                                         </button>
                                                                     </td>
-                                                                    <td className="py-2 font-bold text-red-500">{appPct}%</td>
-                                                                    <td className="py-2 text-slate-600">{formatDuration(app.total_time)}</td>
+                                                                    <td className="py-2 text-slate-600 text-right">{formatDuration(app.total_time)}</td>
+                                                                    <td className="py-2 font-bold text-red-500 text-right">{appPct}%</td>
                                                                 </tr>
                                                             );
                                                         }
