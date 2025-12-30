@@ -155,8 +155,8 @@ const UsageTable: React.FC<{ title: string; data: any[] }> = ({ title, data }) =
                 )}
               </td>
               <td className="px-8 py-4 text-slate-500">{item.category}</td>
-              <td className="px-8 py-4 font-bold text-slate-600">{formatDuration ? formatDuration(item.total_time) : item.time}</td>
-              <td className="px-8 py-4 text-right font-black text-slate-800">{item.percent || ((item.total_time/1)*100).toFixed(1)+'%'}</td>
+              <td className="px-8 py-4 font-bold text-slate-600">{item.time}</td>
+              <td className="px-8 py-4 text-right font-black text-slate-800">{item.percent}</td>
             </tr>
           );
         })}
@@ -304,66 +304,75 @@ const MainDashboard: React.FC = () => {
   const targetBreak = calculateTarget(80, activeUsers, days);
 
 
+  // Helper to get trend direction and color based on actual/target percentage
+  const getTrend = (actual: number | undefined, target: number | undefined) => {
+      const act = Number(actual || 0);
+      const tgt = Number(target || 1);
+      const pct = tgt > 0 ? (act / tgt) * 100 : 0;
+      if (pct >= 50) {
+          return { trend: 'up', trendColor: 'green' };
+      } else {
+          return { trend: 'down', trendColor: 'red' };
+      }
+  };
 
   const kpiList = [
     { 
         label: "Total time tracked", 
         main: formatDuration(summaryData?.total_time), 
         sub: formatDuration(targetTotal),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(summaryData?.total_time, targetTotal),
         tooltip: getTooltip(summaryData?.total_time, targetTotal)
     },
     { 
         label: "Productive time", 
         main: formatDuration(summaryData?.productive_time), 
         sub: formatDuration(targetProductive),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(summaryData?.productive_time, targetProductive),
         tooltip: getTooltip(summaryData?.productive_time, targetProductive)
     },
     { 
         label: "Unproductive time", 
         main: formatDuration(summaryData?.unproductive_time), 
         sub: formatDuration(targetUnproductive),
-        trend: 'down',
-        trendColor: 'red',
+        ...getTrend(summaryData?.unproductive_time, targetUnproductive),
         tooltip: getTooltip(summaryData?.unproductive_time, targetUnproductive)
     },
     { 
         label: "Neutral & unrated time", 
         main: formatDuration(summaryData?.neutral_time), 
         sub: formatDuration(targetNeutral),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(summaryData?.neutral_time, targetNeutral),
         tooltip: getTooltip(summaryData?.neutral_time, targetNeutral)
     },
     { 
         label: "Idle time", 
         main: formatDuration(summaryData?.idle_time), 
         sub: formatDuration(targetIdle),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(summaryData?.idle_time, targetIdle),
         tooltip: getTooltip(summaryData?.idle_time, targetIdle)
     },
     { 
         label: "Break time", 
         main: formatDuration(summaryData?.break_time), 
         sub: formatDuration(targetBreak),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(summaryData?.break_time, targetBreak),
         tooltip: getTooltip(summaryData?.break_time, targetBreak)
     },
     { 
         label: "Total active users", 
         main: `${activeUsers}`, 
         sub: undefined,
+        trend: undefined,
+        trendColor: undefined,
         tooltip: "Active users count"
     },
     { 
         label: "Total registered users", 
         main: `${totalUsers}`, 
         sub: "",
+        trend: undefined,
+        trendColor: undefined,
         tooltip: "Registered users count"
     },
 
