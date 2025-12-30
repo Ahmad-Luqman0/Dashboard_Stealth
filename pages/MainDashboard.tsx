@@ -1,20 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
-import { RefreshCcw, Download, Loader2, ExternalLink, ChevronUp, Search, User, Users, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { RefreshCcw, Download, Loader2, ExternalLink, ChevronUp, Search, User, Users, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../services/dataService';
 import DateRangeModal from '../components/DateRangeModal';
 
-const KPICard: React.FC<{ label: string; value: string; target?: string }> = ({ label, value, target }) => (
-  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-md transition-shadow">
-    <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">{label}</h3>
-    <div className="flex items-baseline gap-1">
-      <span className="text-2xl font-black text-blue-600 group-hover:scale-105 transition-transform">{value}</span>
-      {target && <span className="text-slate-400 text-xs font-medium italic">/ {target}</span>}
-    </div>
-  </div>
-);
+import KPICard from '../components/KPICard';
 
 const Gauge: React.FC<{ percentage: number; color: string; label: string }> = ({ percentage, color, label }) => {
   const radius = 40;
@@ -118,6 +110,16 @@ const HorizontalBarChart: React.FC<{ items: any[]; color: string; label: string;
   </div>
 );
 
+// Helper to format seconds to "Xh Ym"
+const formatDuration = (seconds?: number | string) => {
+  if (!seconds) return "0h 0m";
+  const sec = Number(seconds);
+  if (isNaN(sec)) return "0h 0m";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return `${h}h ${m}m`;
+};
+
 const UsageTable: React.FC<{ title: string; data: any[] }> = ({ title, data }) => (
   <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-8">
     <div className="p-6 border-b border-slate-100 bg-slate-50/20">
@@ -133,17 +135,31 @@ const UsageTable: React.FC<{ title: string; data: any[] }> = ({ title, data }) =
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-100">
-        {data.map((item, i) => (
-          <tr key={i} className="hover:bg-slate-50 transition-colors group">
-            <td className="px-8 py-4 flex items-center gap-2">
-              <span className="text-blue-500 font-bold group-hover:underline cursor-pointer">{item.name}</span>
-              <ExternalLink size={12} className="text-slate-300" />
-            </td>
-            <td className="px-8 py-4 text-slate-500">{item.category}</td>
-            <td className="px-8 py-4 font-bold text-slate-600">{item.time}</td>
-            <td className="px-8 py-4 text-right font-black text-slate-800">{item.percent}</td>
-          </tr>
-        ))}
+        {data.map((item, i) => {
+          // URLs are identified by '(URL)' tag or containing a dot implies domain, BUT exclude '(APP)' explicitly
+          const isUrl = item.name.includes('(URL)') || (item.name.includes('.') && !item.name.includes('(APP)'));
+          
+          // Clean up the name for the potential URL link
+          const cleanName = item.name.replace(' (URL)', '').replace(' (APP)', '');
+          const url = isUrl ? `https://${cleanName}` : '#';
+
+          return (
+            <tr key={i} className="hover:bg-slate-50 transition-colors group">
+              <td className="px-8 py-4 flex items-center gap-2">
+                {isUrl ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:text-blue-800 group-hover:underline cursor-pointer flex items-center gap-1 transition-colors">
+                        {item.name} <ExternalLink size={12} className="text-blue-400" />
+                    </a>
+                ) : (
+                    <span className="text-blue-600 font-bold">{item.name}</span>
+                )}
+              </td>
+              <td className="px-8 py-4 text-slate-500">{item.category}</td>
+              <td className="px-8 py-4 font-bold text-slate-600">{formatDuration ? formatDuration(item.total_time) : item.time}</td>
+              <td className="px-8 py-4 text-right font-black text-slate-800">{item.percent || ((item.total_time/1)*100).toFixed(1)+'%'}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   </div>
@@ -154,6 +170,10 @@ const MainDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('Daily');
   const [showDateModal, setShowDateModal] = useState(false);
+  const [userBreakdown, setUserBreakdown] = useState<any[]>([]);
+  const [summaryData, setSummaryData] = useState<any>(null); // New state for raw KPI data
+  const [selectedCategory, setSelectedCategory] = useState<{label: string, users: any[]} | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null); // New state for user detail modal
 
   const handleCustomRange = (start: Date, end: Date) => {
     const formatDate = (d: Date) => {
@@ -166,12 +186,60 @@ const MainDashboard: React.FC = () => {
     setTimeRange(rangeStr);
   };
 
+  // Helper to format seconds to "Xh Ym" (Local version for component scope if needed, but module level one covers UsageTable)
+  // We can remove this local one if we use the module level one, but keeping it won't hurt, or we can just comment it out to avoid shadow variable warning
+  // const formatDuration = ... 
+
+
+  // Helper Helpers
+  const getDurationInDays = () => {
+    if (timeRange === 'Daily' || timeRange === 'Yesterday') return 1;
+    if (timeRange === 'Weekly') return 7;
+    if (timeRange === 'Monthly') return 30;
+    if (timeRange.startsWith('custom:')) {
+        const parts = timeRange.split(':');
+        if (parts.length === 3) {
+            const start = new Date(parts[1]);
+            const end = new Date(parts[2]);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+        }
+    }
+    return 1;
+  };
+
+  const calculateTarget = (minutesPerDay: number, activeUsers: number, days: number) => {
+    const totalMinutes = minutesPerDay * Math.max(activeUsers, 1) * days;
+    return totalMinutes * 60; // seconds
+  };
+
+  // Helper for dynamic tooltip: "X minutes (Y%)"
+  const getTooltip = (actual?: number, target?: number) => {
+      if (!actual && actual !== 0) return undefined;
+      const act = Number(actual);
+      const tgt = Number(target);
+      const mins = Math.round(act / 60);
+      const pct = tgt > 0 ? Math.round((act / tgt) * 100) : 0;
+      return `${mins} minutes (${pct}%)`;
+  };
+
   const { registerExportHandler, triggerExport } = useExport();
 
   const fetchData = async () => {
     setLoading(true);
-    const result = await db.getDashboardData(timeRange.toLowerCase());
-    setData(result);
+    try {
+        const [dashboardData, breakdownData, summaryStats] = await Promise.all([
+            db.getDashboardData(timeRange.toLowerCase()),
+            db.getUserActivityBreakdown(timeRange.toLowerCase()),
+            db.getSummaryKPIs(timeRange.toLowerCase())
+        ]);
+        setData(dashboardData);
+        setUserBreakdown(breakdownData);
+        setSummaryData(summaryStats);
+    } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
+        setData({ error: true });
+    }
     setLoading(false);
   };
 
@@ -200,7 +268,7 @@ const MainDashboard: React.FC = () => {
     });
   }, [data, timeRange, registerExportHandler]);
 
-  if (loading || !data) {
+  if (loading || !data || !summaryData) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -223,6 +291,84 @@ const MainDashboard: React.FC = () => {
     );
   }
 
+  const days = getDurationInDays();
+  const activeUsers = Number(summaryData?.active_users || 0);
+  const totalUsers = Number(summaryData?.registered_users || 0);
+
+  // Targets (minutes per user per day)
+  const targetTotal = calculateTarget(460, activeUsers, days);
+  const targetProductive = calculateTarget(390, activeUsers, days);
+  const targetUnproductive = calculateTarget(40, activeUsers, days);
+  const targetNeutral = calculateTarget(20, activeUsers, days);
+  const targetIdle = calculateTarget(10, activeUsers, days);
+  const targetBreak = calculateTarget(80, activeUsers, days);
+
+
+
+  const kpiList = [
+    { 
+        label: "Total time tracked", 
+        main: formatDuration(summaryData?.total_time), 
+        sub: formatDuration(targetTotal),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(summaryData?.total_time, targetTotal)
+    },
+    { 
+        label: "Productive time", 
+        main: formatDuration(summaryData?.productive_time), 
+        sub: formatDuration(targetProductive),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(summaryData?.productive_time, targetProductive)
+    },
+    { 
+        label: "Unproductive time", 
+        main: formatDuration(summaryData?.unproductive_time), 
+        sub: formatDuration(targetUnproductive),
+        trend: 'down',
+        trendColor: 'red',
+        tooltip: getTooltip(summaryData?.unproductive_time, targetUnproductive)
+    },
+    { 
+        label: "Neutral & unrated time", 
+        main: formatDuration(summaryData?.neutral_time), 
+        sub: formatDuration(targetNeutral),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(summaryData?.neutral_time, targetNeutral)
+    },
+    { 
+        label: "Idle time", 
+        main: formatDuration(summaryData?.idle_time), 
+        sub: formatDuration(targetIdle),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(summaryData?.idle_time, targetIdle)
+    },
+    { 
+        label: "Break time", 
+        main: formatDuration(summaryData?.break_time), 
+        sub: formatDuration(targetBreak),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(summaryData?.break_time, targetBreak)
+    },
+    { 
+        label: "Total active users", 
+        main: `${activeUsers}`, 
+        sub: undefined,
+        tooltip: "Active users count"
+    },
+    { 
+        label: "Total registered users", 
+        main: `${totalUsers}`, 
+        sub: "",
+        tooltip: "Registered users count"
+    },
+
+  ];
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-32">
       {/* Top Header Section */}
@@ -242,15 +388,7 @@ const MainDashboard: React.FC = () => {
         {/* Filters and Search */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-slate-500 uppercase tracking-tighter w-12">User:</label>
-            <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search user..." 
-                className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium" 
-              />
-            </div>
+             {/* Search removed as per request */}
           </div>
           <div className="flex items-center gap-4">
             <label className="text-sm font-bold text-slate-500 uppercase tracking-tighter w-24">Supervisor:</label>
@@ -294,17 +432,18 @@ const MainDashboard: React.FC = () => {
         />
       </div>
 
-      {/* KPI Cards Row 1 */}
+      {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {data.kpis.slice(0, 4).map((k: any, i: number) => (
-          <KPICard key={i} label={k.label} value={k.value} target={k.target} />
-        ))}
-      </div>
-
-      {/* KPI Cards Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {data.kpis.slice(4).map((k: any, i: number) => (
-          <KPICard key={i} label={k.label} value={k.value} target={k.target} />
+        {kpiList.map((k, i) => (
+            <KPICard 
+                key={i} 
+                label={k.label} 
+                mainValue={k.main} 
+                subValue={k.sub} 
+                trend={k.trend as any}
+                trendColor={k.trendColor as any}
+                tooltip={k.tooltip}
+            />
         ))}
       </div>
 
@@ -318,7 +457,14 @@ const MainDashboard: React.FC = () => {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
             {data.statusLists.activeUsers.map((u: any, i: number) => (
-              <div key={i} className="flex items-center gap-4 p-3 bg-green-50/20 rounded-lg border-l-4 border-green-500 group hover:bg-green-50 transition-all">
+              <div 
+                key={i} 
+                className="flex items-center gap-4 p-3 bg-green-50/20 rounded-lg border-l-4 border-green-500 group hover:bg-green-50 transition-all cursor-pointer"
+                onClick={() => {
+                    const fullUser = userBreakdown.find((ub: any) => ub.name === u.name) || u;
+                    setSelectedUser(fullUser);
+                }}
+              >
                 <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shrink-0">
                   {u.name.charAt(0)}
                 </div>
@@ -436,6 +582,154 @@ const MainDashboard: React.FC = () => {
         </div>
       </div>
 
+       {/* User Activity Level Distribution */}
+       <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+         <h3 className="text-sm font-bold text-slate-700 mb-8 uppercase tracking-widest">User Activity Level Distribution</h3>
+         <div className="space-y-8">
+           {(() => {
+               const groups = {
+                 'Very High': [] as any[],
+                 'High': [] as any[],
+                 'Low': [] as any[],
+                 'Very Low': [] as any[]
+               };
+       
+               userBreakdown.forEach(user => {
+                  const tracked = Number(user.tracked);
+                  const idle = Number(user.idle);
+                  const breakTime = Number(user.break_time || 0);
+                  
+                  // Formula: ((Tracked - Idle - Break) / Tracked) * 100
+                  const activeTime = tracked - idle - breakTime;
+                  const progress = tracked > 0 ? (activeTime / tracked) * 100 : 0;
+                  
+                  if (progress >= 75) groups['Very High'].push(user);
+                  else if (progress >= 50) groups['High'].push(user);
+                  else if (progress >= 25) groups['Low'].push(user);
+                  else groups['Very Low'].push(user);
+               });
+
+               const renderCategory = (label: string, users: any[], colorClass: string, bgClass: string, borderClass: string) => (
+                   <div 
+                        className="flex items-center gap-8 cursor-pointer group"
+                        onClick={() => setSelectedCategory({ label, users })}
+                   >
+                     <span className={`w-24 text-sm font-black ${colorClass} uppercase tracking-tighter group-hover:scale-105 transition-transform`}>{label}</span>
+                     <div className="flex flex-wrap gap-2">
+                       {users.map((u, i) => (
+                         <span 
+                           key={i} 
+                           onClick={(e) => { e.stopPropagation(); setSelectedUser(u); }}
+                           className={`px-3 py-1.5 ${bgClass} ${colorClass} rounded-full text-[10px] font-bold ${borderClass} group-hover:shadow-sm transition-shadow cursor-pointer hover:scale-105`}
+                         >
+                           {u.name}
+                         </span>
+                       ))}
+                       {users.length === 0 && <span className="text-slate-400 text-xs italic">No users</span>}
+                     </div>
+                   </div>
+               );
+
+               return (
+                   <>
+                       {renderCategory('Very High', groups['Very High'], 'text-green-600', 'bg-green-50', 'border border-green-100')}
+                       {renderCategory('High', groups['High'], 'text-amber-500', 'bg-amber-50', 'border border-amber-100')}
+                       {renderCategory('Low', groups['Low'], 'text-orange-500', 'bg-orange-50', 'border border-orange-100')}
+                       {renderCategory('Very Low', groups['Very Low'], 'text-red-500', 'bg-red-50', 'border border-red-100')}
+                   </>
+               );
+           })()}
+         </div>
+       </div>
+
+       {/* Modal Overlay */}
+       {selectedCategory && (
+            <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedCategory(null)}>
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                    {/* Modal Header */}
+                    <div className={`p-6 border-b border-slate-100 flex justify-between items-center ${
+                            selectedCategory.label === 'Very High' ? 'bg-green-50' :
+                            selectedCategory.label === 'High' ? 'bg-yellow-50' :
+                            selectedCategory.label === 'Low' ? 'bg-orange-50' : 'bg-red-50'
+                    }`}>
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800">{selectedCategory.label} Activity Users</h3>
+                            <p className="text-slate-500 text-sm mt-1">Total users: {selectedCategory.users.length}</p>
+                        </div>
+                        <button onClick={() => setSelectedCategory(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-500">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    
+                    {/* Modal Body */}
+                    <div className="p-6 overflow-y-auto bg-slate-50/50">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {selectedCategory.users.map((user, idx) => {
+                                    const tracked = Number(user.tracked);
+                                    const idle = Number(user.idle);
+                                    const breakTime = Number(user.break_time || 0);
+                                    const active = tracked - idle - breakTime; 
+                                    const productive = Number(user.productive);
+                                    
+                                    const progress = tracked > 0 ? (active / tracked) * 100 : 0;
+                                    
+                                    return (
+                                        <div key={idx} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-800 text-lg leading-tight">{user.name}</h4>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs text-slate-500">Activity Level:</span>
+                                                    <span className="text-sm font-bold text-slate-700">{progress.toFixed(1)}%</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-lg font-bold text-slate-400">{progress.toFixed(1)}%</span>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                                                <div className="space-y-1">
+                                                    <p className="text-green-600 font-bold">Active</p>
+                                                    <p className="text-slate-600 font-medium">{formatDuration(active)}</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-amber-500 font-bold">Idle</p>
+                                                    <p className="text-slate-600 font-medium">{formatDuration(idle)}</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-purple-500 font-bold">Break</p>
+                                                    <p className="text-slate-600 font-medium">{formatDuration(breakTime)}</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-blue-600 font-bold">Productive</p>
+                                                    <p className="text-slate-600 font-medium">{formatDuration(productive)}</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-blue-600 font-bold">Tracked</p>
+                                                    <p className="text-slate-600 font-medium">{formatDuration(tracked)}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 pt-2 border-t border-slate-50">
+                                                <div className="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                                                    <span>Activity Progress</span>
+                                                    <span>{progress.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                    <div 
+                                                    className={`h-full rounded-full ${progress >= 85 ? 'bg-green-500' : progress >= 50 ? 'bg-blue-500' : 'bg-red-500'}`} 
+                                                    style={{ width: `${progress}%` }} 
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
       {/* Efficiency Metrics Tables */}
       <div className="grid grid-cols-1 gap-8">
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -448,8 +742,15 @@ const MainDashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data.efficiency.idleTimeTable.map((row: any, i: number) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-8 py-4 font-bold text-slate-700">{row.name}</td>
+                <tr 
+                    key={i} 
+                    className="hover:bg-slate-50 cursor-pointer group"
+                    onClick={() => {
+                        const fullUser = userBreakdown.find((ub: any) => ub.name === row.name) || row;
+                        setSelectedUser(fullUser);
+                    }}
+                >
+                  <td className="px-8 py-4 font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{row.name}</td>
                   <td className="px-8 py-4 font-bold text-red-500">{row.percent}</td>
                   <td className="px-8 py-4 text-slate-500">{row.minutes}</td>
                 </tr>
@@ -479,46 +780,7 @@ const MainDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Activity Distribution Visualisation */}
-      <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-700 mb-8 uppercase tracking-widest">User Activity Level Distribution</h3>
-        <div className="space-y-8">
-          <div className="flex items-center gap-8">
-            <span className="w-24 text-sm font-black text-green-600 uppercase tracking-tighter">Very High</span>
-            <div className="flex flex-wrap gap-2">
-              {data.distribution.veryHigh.map((name: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold border border-green-100">{name}</span>
-              ))}
-              <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold border border-green-100">+9 more</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-8">
-            <span className="w-24 text-sm font-black text-amber-500 uppercase tracking-tighter">High</span>
-            <div className="flex flex-wrap gap-2">
-              {data.distribution.high.map((name: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold border border-amber-100">{name}</span>
-              ))}
-              <span className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold border border-amber-100">+13 more</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-8">
-            <span className="w-24 text-sm font-black text-red-500 uppercase tracking-tighter">Low</span>
-            <div className="flex flex-wrap gap-2">
-              {data.distribution.low.map((name: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-[10px] font-bold border border-red-100">{name}</span>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-8">
-            <span className="w-24 text-sm font-black text-red-800 uppercase tracking-tighter">Very Low</span>
-            <div className="flex flex-wrap gap-2">
-              {data.distribution.veryLow.map((name: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 bg-red-100 text-red-900 rounded-full text-[10px] font-bold border border-red-200">{name}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* Top Apps and Domains Lists */}
       <UsageTable title="Top Used Productive Websites & Apps" data={data.usage.productiveApps} />
@@ -532,6 +794,48 @@ const MainDashboard: React.FC = () => {
       >
         <ChevronUp size={28} strokeWidth={3} className="group-hover:-translate-y-1 transition-transform" />
       </button>
+
+      {/* User Detail Modal */}
+      {selectedUser && (
+             <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
+                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="text-lg font-bold text-slate-800">User Details</h3>
+                        <button onClick={() => setSelectedUser(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                    </div>
+                    <div className="p-6">
+                        <div className="flex justify-between items-start mb-6">
+                             <div>
+                                 <h4 className="font-bold text-slate-800 text-xl leading-tight">{selectedUser.name}</h4>
+                                 <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-slate-500">Total Tracked:</span>
+                                    <span className="text-sm font-bold text-slate-700">{formatDuration(selectedUser.tracked || selectedUser.total_time)}</span>
+                                 </div>
+                             </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Active Time</p>
+                                 <p className="text-lg font-bold text-green-600">{formatDuration(Number(selectedUser.tracked) - Number(selectedUser.idle) - Number(selectedUser.break_time))}</p>
+                             </div>
+                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Idle Time</p>
+                                 <p className="text-lg font-bold text-amber-500">{formatDuration(selectedUser.idle)}</p>
+                             </div>
+                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Break Time</p>
+                                 <p className="text-lg font-bold text-purple-500">{formatDuration(selectedUser.break_time)}</p>
+                             </div>
+                              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Productive</p>
+                                 <p className="text-lg font-bold text-blue-600">{formatDuration(selectedUser.productive)}</p>
+                             </div>
+                        </div>
+                    </div>
+                 </div>
+             </div>
+      )}
     </div>
   );
 };
