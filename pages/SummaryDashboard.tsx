@@ -190,65 +190,75 @@ const SummaryDashboard: React.FC = () => {
       return `${mins} minutes (${pct}%)`;
   };
 
+  // Helper to get trend direction and color based on actual/target percentage
+  const getTrend = (actual: number | undefined, target: number | undefined) => {
+      const act = Number(actual || 0);
+      const tgt = Number(target || 1);
+      const pct = tgt > 0 ? (act / tgt) * 100 : 0;
+      if (pct >= 50) {
+          return { trend: 'up', trendColor: 'green' };
+      } else {
+          return { trend: 'down', trendColor: 'red' };
+      }
+  };
+
   const kpiList = [
     { 
         label: "Total time tracked", 
         main: formatDuration(data?.total_time), 
         sub: formatDuration(targetTotal),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(data?.total_time, targetTotal),
         tooltip: getTooltip(data?.total_time, targetTotal)
     },
     { 
         label: "Productive time", 
         main: formatDuration(data?.productive_time), 
         sub: formatDuration(targetProductive),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(data?.productive_time, targetProductive),
         tooltip: getTooltip(data?.productive_time, targetProductive)
     },
     { 
         label: "Unproductive time", 
         main: formatDuration(data?.unproductive_time), 
         sub: formatDuration(targetUnproductive),
-        trend: 'down',
-        trendColor: 'red',
+        ...getTrend(data?.unproductive_time, targetUnproductive),
         tooltip: getTooltip(data?.unproductive_time, targetUnproductive)
     },
     { 
         label: "Neutral & unrated time", 
         main: formatDuration(data?.neutral_time), 
         sub: formatDuration(targetNeutral),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(data?.neutral_time, targetNeutral),
         tooltip: getTooltip(data?.neutral_time, targetNeutral)
     },
     { 
         label: "Idle time", 
         main: formatDuration(data?.idle_time), 
         sub: formatDuration(targetIdle),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(data?.idle_time, targetIdle),
         tooltip: getTooltip(data?.idle_time, targetIdle)
     },
     { 
         label: "Break time", 
         main: formatDuration(data?.break_time), 
         sub: formatDuration(targetBreak),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(data?.break_time, targetBreak),
         tooltip: getTooltip(data?.break_time, targetBreak)
     },
     { 
         label: "Total active users", 
         main: data?.active_users || "0", 
         sub: undefined,
+        trend: undefined,
+        trendColor: undefined,
         tooltip: "Active users count"
     },
     { 
         label: "Total registered users", 
         main: `${totalUsers}`, 
         sub: "",
+        trend: undefined,
+        trendColor: undefined,
         tooltip: "Registered users count"
     },
     // Average Section
@@ -256,32 +266,28 @@ const SummaryDashboard: React.FC = () => {
         label: "Average Time tracked", 
         main: formatDuration(avgTotal), 
         sub: formatDuration(targetAvgTotal),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(avgTotal, targetAvgTotal),
         tooltip: getTooltip(avgTotal, targetAvgTotal)
     },
     { 
         label: "Average Productive time", 
         main: formatDuration(avgProductive), 
         sub: formatDuration(targetAvgProductive),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(avgProductive, targetAvgProductive),
         tooltip: getTooltip(avgProductive, targetAvgProductive)
     },
     { 
         label: "Average Unproductive time", 
         main: formatDuration(avgUnproductive), 
         sub: formatDuration(targetAvgUnproductive),
-        trend: 'down',
-        trendColor: 'red',
+        ...getTrend(avgUnproductive, targetAvgUnproductive),
         tooltip: getTooltip(avgUnproductive, targetAvgUnproductive)
     },
     { 
         label: "Average Neutral & Unrated time", 
         main: formatDuration(avgNeutral), 
         sub: formatDuration(targetAvgNeutral),
-        trend: 'up',
-        trendColor: 'green',
+        ...getTrend(avgNeutral, targetAvgNeutral),
         tooltip: getTooltip(avgNeutral, targetAvgNeutral)
     },
   ];
@@ -382,7 +388,7 @@ const SummaryDashboard: React.FC = () => {
                       <th className="px-4 py-3">Name</th>
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Total Time</th>
-                      <th className="px-4 py-3">% of Productive Time</th>
+                      <th className="px-4 py-3 text-right">% of Usage</th>
                   </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -404,7 +410,7 @@ const SummaryDashboard: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-slate-500">{app.category}</td>
                           <td className="px-4 py-3 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
-                          <td className="px-4 py-3 text-slate-500">{((Number(app.total_time) / Number(data.productive_time || 1)) * 100).toFixed(1)}%</td>
+                          <td className="px-4 py-3 text-slate-500 text-right">{((Number(app.total_time) / Number(data.productive_time || 1)) * 100).toFixed(2)}%</td>
                       </tr>
                       );
                   })}
@@ -421,7 +427,7 @@ const SummaryDashboard: React.FC = () => {
                       <th className="px-4 py-3">Name</th>
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Total Time</th>
-                      <th className="px-4 py-3">% of Unproductive Time</th>
+                      <th className="px-4 py-3 text-right">% of Usage</th>
                   </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -443,7 +449,7 @@ const SummaryDashboard: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-slate-500">{app.category}</td>
                           <td className="px-4 py-3 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
-                          <td className="px-4 py-3 text-slate-500">{((Number(app.total_time) / Number(data.unproductive_time || 1)) * 100).toFixed(1)}%</td>
+                          <td className="px-4 py-3 text-slate-500 text-right">{((Number(app.total_time) / Number(data.unproductive_time || 1)) * 100).toFixed(2)}%</td>
                       </tr>
                       );
                   })}
