@@ -272,6 +272,38 @@ app.get('/api/summary/users-activity', async (req, res) => {
   }
 });
 
+// Full User Activity Breakdown
+app.get('/api/summary/user-breakdown', async (req, res) => {
+    const { range = 'yesterday', shift } = req.query;
+    const dateFilter = getDateFilter(range, 'ss.created_at::date');
+    const shiftFilter = getShiftFilter(shift);
+
+    try {
+        // Assuming break time might be tracked in the future, for now 0
+        // We select ALL users active in this period
+        const result = await query(`
+            SELECT 
+                u.name,
+                COALESCE(SUM(ss.productive_time), 0) as productive,
+                COALESCE(SUM(ss.idle_time), 0) as idle,
+                COALESCE(SUM(ss.wasted_time), 0) as wasted,
+                COALESCE(SUM(ss.neutral_time), 0) as neutral,
+                COALESCE(SUM(ss.total_time), 0) as tracked,
+                0 as break_time
+            FROM users u
+            JOIN stealth_sessions ss ON u.id = ss.user_id
+            WHERE ${dateFilter} ${shiftFilter}
+            GROUP BY u.id, u.name
+            HAVING SUM(ss.total_time) > 0
+            ORDER BY tracked DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch user breakdown' });
+    }
+});
+
 // Charts
 app.get('/api/summary/charts', async (req, res) => {
     const { range = 'yesterday', shift } = req.query;
@@ -558,18 +590,30 @@ app.get('/api/dashboard', async (req, res) => {
         const startedLateList = lateQuery.rows
             .filter(r => {
                 const date = new Date(r.start_time);
-                return date.getHours() >= SHIFT_START_HOUR && date.getMinutes() > 0;
+                const totalMinutes = date.getHours() * 60 + date.getMinutes();
+                const targetMinutes = SHIFT_START_HOUR * 60;
+                return totalMinutes > targetMinutes;
             })
             .map(r => {
                 const date = new Date(r.start_time);
-                const h = Math.floor((date.getTime() % 86400000) / 3600000); // Rough logic
-                const lateMins = date.getMinutes();
+                const totalMinutes = date.getHours() * 60 + date.getMinutes();
+                const targetMinutes = SHIFT_START_HOUR * 60;
+                const diff = totalMinutes - targetMinutes;
+                
+                let delayStr;
+                if (diff >= 60) {
+                    const h = Math.floor(diff / 60);
+                    const m = diff % 60;
+                    delayStr = `${h}h ${m}m late`;
+                } else {
+                    delayStr = `${diff}m late`;
+                }
                 
                 return {
                     name: r.name,
                     scheduled: '09:00 AM',
                     started: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                    delay: `${lateMins}m late`,
+                    delay: delayStr,
                     dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
                 };
             });
