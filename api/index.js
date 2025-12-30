@@ -587,16 +587,26 @@ app.get('/api/dashboard', async (req, res) => {
             ORDER BY start_time DESC
         `);
         const SHIFT_START_HOUR = 9; // 9 AM Default
+        const PKT_OFFSET_HOURS = 5; // Pakistan Standard Time (UTC+5)
+        
         const startedLateList = lateQuery.rows
             .filter(r => {
                 const date = new Date(r.start_time);
-                const totalMinutes = date.getHours() * 60 + date.getMinutes();
+                // Use UTC hours + PKT offset for consistent timezone handling
+                const utcHours = date.getUTCHours();
+                const utcMinutes = date.getUTCMinutes();
+                const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
+                const totalMinutes = pktHours * 60 + utcMinutes;
                 const targetMinutes = SHIFT_START_HOUR * 60;
                 return totalMinutes > targetMinutes;
             })
             .map(r => {
                 const date = new Date(r.start_time);
-                const totalMinutes = date.getHours() * 60 + date.getMinutes();
+                // Use UTC hours + PKT offset for consistent timezone handling
+                const utcHours = date.getUTCHours();
+                const utcMinutes = date.getUTCMinutes();
+                const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
+                const totalMinutes = pktHours * 60 + utcMinutes;
                 const targetMinutes = SHIFT_START_HOUR * 60;
                 const diff = totalMinutes - targetMinutes;
                 
@@ -609,12 +619,15 @@ app.get('/api/dashboard', async (req, res) => {
                     delayStr = `${diff}m late`;
                 }
                 
+                // Format time in PKT
+                const pktTimeStr = `${pktHours > 12 ? pktHours - 12 : pktHours}:${String(utcMinutes).padStart(2, '0')} ${pktHours >= 12 ? 'PM' : 'AM'}`;
+                
                 return {
                     name: r.name,
                     scheduled: '09:00 AM',
-                    started: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                    started: pktTimeStr,
                     delay: delayStr,
-                    dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                    dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Karachi' })
                 };
             });
 
