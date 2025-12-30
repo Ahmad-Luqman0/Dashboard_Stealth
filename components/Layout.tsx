@@ -42,8 +42,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
             <div className="flex items-center gap-3">
-                <img src="/logo.jpeg" alt="Logo" className="h-14 w-auto object-contain mix-blend-multiply" />
-                <span className="text-2xl font-bold text-blue-600 tracking-tight">Immense Code</span>
+                <img src="/logo.png" alt="Logo" className="h-14 w-auto object-contain" />
+                <span className="text-2xl font-bold text-blue-600 tracking-tight">Tecknowlogy CA</span>
               </div>
           )}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
@@ -114,6 +114,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <button onClick={triggerExport} className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-300 hover:bg-blue-700 transition-all hover:-translate-y-1 active:scale-95 group">
            <svg className="w-6 h-6 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
         </button>
+
+        {/* Powered By Footer */}
+        <div className="fixed bottom-2 left-2 text-[10px] text-slate-400 font-medium">
+          Powered by <span className="font-bold text-blue-500">Immense Code</span> V1.0
+        </div>
       </main>
     </div>
   );
