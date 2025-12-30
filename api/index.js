@@ -168,8 +168,8 @@ app.get('/api/summary/kpis', async (req, res) => {
     `);
     const row = timeStats.rows[0];
 
-    // 2. Active Users (Users active in the last 30 minutes)
-    const activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes'`;
+    // 2. Active Users (Users active in the last 30 minutes, filtered by shift)
+    const activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter}`;
     const activeUsersResult = await query(activeUsersQuery);
     const activeUsers = activeUsersResult.rows[0].count;
 
