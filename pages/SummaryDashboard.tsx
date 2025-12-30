@@ -128,17 +128,162 @@ const SummaryDashboard: React.FC = () => {
 
   const totalTime = Number(data?.total_time || 0);
   const totalUsers = Number(data?.registered_users || 0);
+  const activeUsers = Number(data?.active_users || 0);
   const totalTimeFormatted = formatDuration(totalTime);
 
+  const getDurationInDays = () => {
+    if (selectedRange.startsWith('custom:')) {
+        const parts = selectedRange.split(':');
+        if (parts.length === 3) {
+            const start = new Date(parts[1]);
+            const end = new Date(parts[2]);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+            return Math.max(1, diffDays);
+        }
+    }
+    switch(selectedRange) {
+        case 'daily': return 1;
+        case 'yesterday': return 1;
+        case 'weekly': return 7;
+        case 'monthly': return 30;
+        default: return 1;
+    }
+  };
+
+  const days = getDurationInDays();
+  const calculateTarget = (minutesPerDay: number) => {
+     // Formula: threshold * activeUsers * days
+     // Result in minutes, convert to seconds for formatDuration
+     return minutesPerDay * activeUsers * days * 60;
+  };
+
+  // Thresholds in minutes
+  const targetTotal = calculateTarget(460);
+  const targetProductive = calculateTarget(390);
+  const targetUnproductive = calculateTarget(40);
+  const targetNeutral = calculateTarget(20);
+  const targetIdle = calculateTarget(10);
+  const targetBreak = calculateTarget(80);
+
+  // Averages Calculations
+  const activeUsersCount = Math.max(activeUsers, 1); // Avoid div by 0
+  
+  const avgTotal = totalTime / (activeUsersCount * days);
+  const avgProductive = (data?.productive_time || 0) / (activeUsersCount * days);
+  const avgUnproductive = (data?.unproductive_time || 0) / (activeUsersCount * days);
+  const avgNeutral = (data?.neutral_time || 0) / (activeUsersCount * days);
+
+  // Fixed Average Targets (minutes -> seconds)
+  const targetAvgTotal = 460 * 60;
+  const targetAvgProductive = 390 * 60;
+  const targetAvgUnproductive = 40 * 60;
+  const targetAvgNeutral = 20 * 60;
+
+  // Helper for dynamic tooltip: "X minutes (Y%)"
+  const getTooltip = (actual?: number, target?: number) => {
+      if (!actual && actual !== 0) return undefined;
+      const act = Number(actual);
+      const tgt = Number(target);
+      const mins = Math.round(act / 60);
+      const pct = tgt > 0 ? Math.round((act / tgt) * 100) : 0;
+      return `${mins} minutes (${pct}%)`;
+  };
+
   const kpiList = [
-    { label: "Total time tracked", main: formatDuration(data?.total_time), sub: "" },
-    { label: "Productive time", main: formatDuration(data?.productive_time), sub: totalTimeFormatted },
-    { label: "Unproductive time", main: formatDuration(data?.unproductive_time), sub: totalTimeFormatted },
-    { label: "Neutral time", main: formatDuration(data?.neutral_time), sub: totalTimeFormatted },
-    { label: "Idle time", main: formatDuration(data?.idle_time), sub: totalTimeFormatted },
-    { label: "Break time", main: formatDuration(data?.break_time), sub: totalTimeFormatted },
-    { label: "Total active users", main: data?.active_users || "0", sub: undefined },
-    { label: "Total registered users", main: `${totalUsers}`, sub: "" }
+    { 
+        label: "Total time tracked", 
+        main: formatDuration(data?.total_time), 
+        sub: formatDuration(targetTotal),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(data?.total_time, targetTotal)
+    },
+    { 
+        label: "Productive time", 
+        main: formatDuration(data?.productive_time), 
+        sub: formatDuration(targetProductive),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(data?.productive_time, targetProductive)
+    },
+    { 
+        label: "Unproductive time", 
+        main: formatDuration(data?.unproductive_time), 
+        sub: formatDuration(targetUnproductive),
+        trend: 'down',
+        trendColor: 'red',
+        tooltip: getTooltip(data?.unproductive_time, targetUnproductive)
+    },
+    { 
+        label: "Neutral & unrated time", 
+        main: formatDuration(data?.neutral_time), 
+        sub: formatDuration(targetNeutral),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(data?.neutral_time, targetNeutral)
+    },
+    { 
+        label: "Idle time", 
+        main: formatDuration(data?.idle_time), 
+        sub: formatDuration(targetIdle),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(data?.idle_time, targetIdle)
+    },
+    { 
+        label: "Break time", 
+        main: formatDuration(data?.break_time), 
+        sub: formatDuration(targetBreak),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(data?.break_time, targetBreak)
+    },
+    { 
+        label: "Total active users", 
+        main: data?.active_users || "0", 
+        sub: undefined,
+        tooltip: "Active users count"
+    },
+    { 
+        label: "Total registered users", 
+        main: `${totalUsers}`, 
+        sub: "",
+        tooltip: "Registered users count"
+    },
+    // Average Section
+    { 
+        label: "Average Time tracked", 
+        main: formatDuration(avgTotal), 
+        sub: formatDuration(targetAvgTotal),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(avgTotal, targetAvgTotal)
+    },
+    { 
+        label: "Average Productive time", 
+        main: formatDuration(avgProductive), 
+        sub: formatDuration(targetAvgProductive),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(avgProductive, targetAvgProductive)
+    },
+    { 
+        label: "Average Unproductive time", 
+        main: formatDuration(avgUnproductive), 
+        sub: formatDuration(targetAvgUnproductive),
+        trend: 'down',
+        trendColor: 'red',
+        tooltip: getTooltip(avgUnproductive, targetAvgUnproductive)
+    },
+    { 
+        label: "Average Neutral & Unrated time", 
+        main: formatDuration(avgNeutral), 
+        sub: formatDuration(targetAvgNeutral),
+        trend: 'up',
+        trendColor: 'green',
+        tooltip: getTooltip(avgNeutral, targetAvgNeutral)
+    },
   ];
 
   const ranges = [
@@ -215,7 +360,17 @@ const SummaryDashboard: React.FC = () => {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiList.map((k, i) => <KPICard key={i} label={k.label} mainValue={k.main} subValue={k.sub} />)}
+        {kpiList.map((k, i) => (
+            <KPICard 
+                key={i} 
+                label={k.label} 
+                mainValue={k.main} 
+                subValue={k.sub} 
+                trend={k.trend as any}
+                trendColor={k.trendColor as any}
+                tooltip={k.tooltip}
+            />
+        ))}
       </div>
 
       {/* Top Productive Apps */}
