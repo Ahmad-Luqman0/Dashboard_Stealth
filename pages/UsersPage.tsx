@@ -61,6 +61,7 @@ const UsersPage: React.FC = () => {
 
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
       name: '',
       username: '',
@@ -77,13 +78,23 @@ const UsersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      const res = await db.addDashboardUser(formData);
-      if (res.error) {
-          alert(res.error);
-      } else {
-          setIsModalOpen(false);
-          setFormData({ name: '', username: '', email: '', password: '', phone: '', type: 'employee', status: 'active' });
-          fetchUsers();
+      if (submitting) return;
+      
+      setSubmitting(true);
+      try {
+        const res = await db.addDashboardUser(formData);
+        if (res.error) {
+            alert(res.error);
+        } else {
+            setIsModalOpen(false);
+            setFormData({ name: '', username: '', email: '', password: '', phone: '', type: 'employee', status: 'active' });
+            fetchUsers();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An unexpected error occurred');
+      } finally {
+        setSubmitting(false);
       }
   };
 
@@ -129,7 +140,7 @@ const UsersPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-slate-700">{user.name}</span>
-                        <span className="text-xs text-slate-400 font-normal">@{user.username}</span>
+                        {user.username && <span className="text-xs text-slate-400 font-normal">@{user.username}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-500 font-medium">{user.email}</td>
@@ -252,7 +263,10 @@ const UsersPage: React.FC = () => {
 
                     <div className="pt-4 flex gap-3">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-sm">Cancel</button>
-                        <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all transform active:scale-95 text-sm">Create User</button>
+                        <button type="submit" disabled={submitting} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all transform active:scale-95 text-sm flex justify-center items-center gap-2">
+                            {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
+                            {submitting ? 'Creating...' : 'Create User'}
+                        </button>
                     </div>
                 </form>
             </div>
