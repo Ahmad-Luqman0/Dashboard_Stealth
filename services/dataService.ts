@@ -56,6 +56,17 @@ export class DataService {
     }
   }
 
+  async getUserActivityBreakdown(range: string = 'yesterday', shift?: string) {
+    try {
+        const shiftParam = shift ? `&shift=${shift}` : '';
+        const response = await fetch(`${API_BASE}/summary/user-breakdown?range=${range}${shiftParam}`);
+        return await response.json();
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+  }
+
   async getChartData(range: string = 'yesterday', shift?: string) {
       try {
           const shiftParam = shift ? `&shift=${shift}` : '';
