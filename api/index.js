@@ -168,12 +168,24 @@ app.get('/api/summary/kpis', async (req, res) => {
     `);
     const row = timeStats.rows[0];
 
-    // 2. Active Users (Users active in the last 30 minutes, filtered by shift)
-    const activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter}`;
+    // 2. Active Users - conditional based on range
+    // Daily: Users active in the last 30 minutes (real-time)
+    // Other ranges: Users who had sessions in that period
+    let activeUsersQuery;
+    if (range === 'daily') {
+        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter}`;
+    } else {
+        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter}`;
+    }
     const activeUsersResult = await query(activeUsersQuery);
     const activeUsers = activeUsersResult.rows[0].count;
 
-    // 3. Registered Users (Total count from users table, filtered by shift if selected)
+    // 3. Logged In Users (Users who had at least one session in the selected date range)
+    const loggedInUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter}`;
+    const loggedInUsersResult = await query(loggedInUsersQuery);
+    const loggedInUsers = loggedInUsersResult.rows[0].count;
+
+    // 4. Registered Users (Total count from users table, filtered by shift if selected)
     let totalUsersQuery = 'SELECT COUNT(*) as count FROM users';
     if (shift && shift !== 'All') {
         const [start, end] = shift.split('-');
@@ -195,6 +207,7 @@ app.get('/api/summary/kpis', async (req, res) => {
       idle_time: row.idle_time,
       break_time: 0, 
       active_users: activeUsers,
+      logged_in_users: loggedInUsers,
       registered_users: totalUsers
     });
   } catch (err) {
@@ -227,7 +240,7 @@ app.get('/api/summary/top-apps', async (req, res) => {
       SELECT 
         sub.domain_or_app as name,
         sub.category,
-        SUM(sub.total_time) as total_time
+        COALESCE(SUM(sub.total_time)::numeric, 0) as total_time
       FROM session_usage_breakdown sub
       ${shiftJoin}
       WHERE sub.category = $1 AND ${dateFilter.replace('created_at', 'sub.created_at')}
@@ -237,7 +250,13 @@ app.get('/api/summary/top-apps', async (req, res) => {
       LIMIT 5
     `, [category]);
     
-    res.json(result.rows);
+    // Convert total_time to number for proper formatting on frontend
+    const rows = result.rows.map(r => ({
+      ...r,
+      total_time: Number(r.total_time)
+    }));
+    
+    res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch top apps' });
@@ -261,7 +280,7 @@ app.get('/api/summary/users-activity', async (req, res) => {
         LEFT JOIN stealth_sessions ss ON u.id = ss.user_id AND ${dateFilter}
         WHERE 1=1 ${shiftFilter}
         GROUP BY u.id, u.name
-        HAVING COALESCE(SUM(ss.total_time), 0) > 0
+        HAVING COALESCE(SUM(ss.total_time), 0) >= 600
         ORDER BY total_time ASC
         LIMIT 5
     `);
@@ -678,16 +697,19 @@ app.get('/api/dashboard', async (req, res) => {
             LIMIT 20
         `);
 
-        // Helper to process usage data
-        const processUsage = (cat) => usageQuery.rows
-            .filter(r => r.category === cat)
-            .slice(0, 5)
-            .map(r => ({
-                name: r.name,
-                category: r.category,
-                time: formatTime(r.time),
-                percent: Number(r.percent).toFixed(2) + '%'
-            }));
+        // Helper to process usage data (maps 'unproductive' to 'wasted' category in DB)
+        const processUsage = (cat) => {
+            const dbCat = cat === 'unproductive' ? 'wasted' : cat;
+            return usageQuery.rows
+                .filter(r => r.category === dbCat)
+                .slice(0, 5)
+                .map(r => ({
+                    name: r.name,
+                    category: r.category,
+                    time: formatTime(r.time),
+                    percent: Number(r.percent).toFixed(2) + '%'
+                }));
+        };
 
         // Gauges: Top Users by % Productive & Unproductive Time
         const userGaugesQuery = await query(`
