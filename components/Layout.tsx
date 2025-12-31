@@ -42,8 +42,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
             <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="Logo" className="h-14 w-auto object-contain" />
-                <span className="text-2xl font-bold text-blue-600 tracking-tight">Tecknowlogy CA</span>
+                <img src="/logo1.jpeg" alt="Logo" className="h-14 w-auto object-contain" />
+                <span className="text-2xl font-bold text-blue-600 tracking-tight">Intelly Digital Solutions</span>
               </div>
           )}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
