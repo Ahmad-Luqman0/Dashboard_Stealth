@@ -10,7 +10,7 @@ const ExecutiveDashboard: React.FC = () => {
   const [productiveApps, setProductiveApps] = React.useState<any[]>([]);
   const [unproductiveApps, setUnproductiveApps] = React.useState<any[]>([]);
   const [neutralApps, setNeutralApps] = React.useState<any[]>([]);
-  const [selectedRange, setSelectedRange] = React.useState('last_month');
+  const [selectedRange, setSelectedRange] = React.useState('daily');
   const [selectedUser, setSelectedUser] = React.useState<any>(null);
   const [shifts, setShifts] = React.useState<any[]>([]);
   const [userBreakdown, setUserBreakdown] = React.useState<any[]>([]);
