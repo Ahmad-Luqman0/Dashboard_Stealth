@@ -162,7 +162,8 @@ app.get('/api/summary/kpis', async (req, res) => {
         COALESCE(SUM(productive_time), 0) as productive_time,
         COALESCE(SUM(wasted_time), 0) as wasted_time,
         COALESCE(SUM(neutral_time), 0) as neutral_time,
-        COALESCE(SUM(idle_time), 0) as idle_time
+        COALESCE(SUM(idle_time), 0) as idle_time,
+        COALESCE(SUM(break_time), 0) as break_time
       FROM stealth_sessions ss
       WHERE ${dateFilter} ${shiftFilter}
     `);
@@ -205,7 +206,7 @@ app.get('/api/summary/kpis', async (req, res) => {
       unproductive_time: row.wasted_time,
       neutral_time: row.neutral_time,
       idle_time: row.idle_time,
-      break_time: 0, 
+      break_time: row.break_time, 
       active_users: activeUsers,
       logged_in_users: loggedInUsers,
       registered_users: totalUsers
@@ -308,7 +309,7 @@ app.get('/api/summary/user-breakdown', async (req, res) => {
                 COALESCE(SUM(ss.wasted_time), 0) as wasted,
                 COALESCE(SUM(ss.neutral_time), 0) as neutral,
                 COALESCE(SUM(ss.total_time), 0) as tracked,
-                0 as break_time
+                COALESCE(SUM(ss.break_time), 0) as break_time
             FROM users u
             JOIN stealth_sessions ss ON u.id = ss.user_id
             WHERE ${dateFilter} ${shiftFilter}
@@ -369,7 +370,7 @@ app.get('/api/summary/charts', async (req, res) => {
                 COALESCE(SUM(ss.total_time), 0) / 3600.0 as tracked,
                 COALESCE(SUM(ss.productive_time), 0) / 3600.0 as productive,
                 COALESCE(SUM(ss.idle_time), 0) / 3600.0 as idle,
-                0 as break
+                COALESCE(SUM(ss.break_time), 0) / 3600.0 as break
             FROM stealth_sessions ss
             WHERE ${dateFilter} ${shiftFilter}
             GROUP BY ${groupCol}, name
@@ -382,7 +383,7 @@ app.get('/api/summary/charts', async (req, res) => {
             tracked: parseFloat(Number(r.tracked).toFixed(2)),
             productive: parseFloat(Number(r.productive).toFixed(2)),
             idle: parseFloat(Number(r.idle).toFixed(2)),
-            break: parseFloat(Number(r.break).toFixed(2))
+            break: parseFloat(Number(r.break || 0).toFixed(2))
         }));
 
         res.json({
@@ -498,6 +499,7 @@ app.get('/api/dashboard', async (req, res) => {
                 SUM(ss.wasted_time) as unproductive,
                 SUM(ss.neutral_time) as neutral,
                 SUM(ss.idle_time) as idle,
+                SUM(ss.break_time) as break_time,
                 COUNT(DISTINCT ss.user_id) as active_users
             FROM stealth_sessions ss
             WHERE ${dateFilter} ${shiftFilter}
@@ -538,7 +540,7 @@ app.get('/api/dashboard', async (req, res) => {
             { label: "Unproductive time", value: formatTime(kpi.unproductive || 0), target: t.wasted },
             { label: "Neutral & unrated time", value: formatTime(kpi.neutral || 0), target: t.neutral },
             { label: "Idle time", value: formatTime(kpi.idle || 0), target: t.idle },
-            { label: "Break time", value: "0h 0m", target: t.break },
+            { label: "Break time", value: formatTime(kpi.break_time || 0), target: t.break },
             { label: "Total active users", value: kpi.active_users || "0" },
             { label: "Total registered users", value: totalUsers }
         ];
@@ -550,7 +552,7 @@ app.get('/api/dashboard', async (req, res) => {
                 COALESCE(SUM(ss.total_time), 0) / 3600.0 as tracked,
                 COALESCE(SUM(ss.productive_time), 0) / 3600.0 as productive,
                 COALESCE(SUM(ss.idle_time), 0) / 60.0 as idle, -- Minutes
-                0 as break
+                COALESCE(SUM(ss.break_time), 0) / 60.0 as break -- Minutes
             FROM stealth_sessions ss
             WHERE ${dateFilter} ${shiftFilter}
             GROUP BY ${groupCol}, label
@@ -737,7 +739,7 @@ app.get('/api/dashboard', async (req, res) => {
                 daily: trendsData.map(d => ({ value: Number(d.tracked), date: d.label })),
                 productive: trendsData.map(d => ({ value: Number(d.productive), date: d.label })),
                 idle: trendsData.map(d => ({ value: Number(d.idle), date: d.label })),
-                break: trendsData.map(d => ({ value: 0, date: d.label }))
+                break: trendsData.map(d => ({ value: Number(d.break) || 0, date: d.label }))
             },
             rankings: {
                 topUsers: rankings.slice(0, 5),
