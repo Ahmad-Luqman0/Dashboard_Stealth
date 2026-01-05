@@ -224,7 +224,8 @@ const ExecutiveDashboard: React.FC = () => {
       target: totalUsers.toString(), 
       actual: loggedInUsers.toString(), 
       percentage: totalUsers > 0 ? ((loggedInUsers / totalUsers) * 100).toFixed(2) : "0.00", 
-      status: loggedInUsers < totalUsers * 0.9 ? 'red' : 'green' 
+      status: loggedInUsers < totalUsers * 0.9 ? 'red' : 'green',
+      hasData: userBreakdown && userBreakdown.length > 0
     },
     { 
       id: 'session',
@@ -232,7 +233,8 @@ const ExecutiveDashboard: React.FC = () => {
       target: formatDuration(targetSession), 
       actual: formatDuration(totalTime), 
       percentage: calculatePercentage(totalTime, targetSession), 
-      status: totalTime < targetSession * 0.8 ? 'red' : 'green' 
+      status: totalTime < targetSession * 0.8 ? 'red' : 'green',
+      hasData: totalTime > 0 || unproductiveApps.length > 0 || neutralApps.length > 0 || topIdleUsers.length > 0
     },
     { 
       id: 'productivity',
@@ -240,7 +242,8 @@ const ExecutiveDashboard: React.FC = () => {
       target: formatDuration(targetProductivity), 
       actual: formatDuration(productiveTime), 
       percentage: calculatePercentage(productiveTime, targetProductivity), 
-      status: productiveTime < targetProductivity * 0.8 ? 'red' : 'green' 
+      status: productiveTime < targetProductivity * 0.8 ? 'red' : 'green',
+      hasData: productiveApps && productiveApps.length > 0
     },
   ];
 
@@ -451,7 +454,7 @@ const ExecutiveDashboard: React.FC = () => {
                                                 <ChevronRight size={14} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                                            </div>
                                        ) : (
-                                           '»'
+                                           null
                                        )}
                                    </td>
                                    <td className="px-6 py-3 font-medium text-slate-700">{b.label}</td>
@@ -745,9 +748,11 @@ const ExecutiveDashboard: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {rows.map((row) => (
                   <React.Fragment key={row.id}>
-                    <tr onClick={() => toggleRow(row.id)} className="hover:bg-slate-50 transition-colors cursor-pointer">
+                    <tr onClick={() => row.hasData && toggleRow(row.id)} className={`transition-colors ${row.hasData ? 'hover:bg-slate-50 cursor-pointer' : ''}`}>
                     <td className="px-6 py-4 text-slate-400">
-                        <ChevronRight size={16} className={`transition-transformDuration-200 ${expandedRow.includes(row.id) ? 'rotate-90' : ''}`} />
+                        {row.hasData && (
+                            <ChevronRight size={16} className={`transition-transformDuration-200 ${expandedRow.includes(row.id) ? 'rotate-90' : ''}`} />
+                        )}
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-700">{row.label}</td>
                     <td className="px-6 py-4 text-slate-500">{row.target}</td>
