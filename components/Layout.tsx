@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
             <div className="flex items-center gap-3">
-                <img src="/logo1.jpeg" alt="Logo" className="h-14 w-auto object-contain" />
+                <img src="/logo2.png" alt="Logo" className="h-14 w-auto object-contain" />
                 <span className="text-2xl font-bold text-blue-600 tracking-tight">Intelly Digital Solutions</span>
               </div>
           )}
