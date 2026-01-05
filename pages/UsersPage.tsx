@@ -26,7 +26,15 @@ const UsersPage: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     const stored = localStorage.getItem('er_session');
-    if (stored) setCurrentUser(JSON.parse(stored));
+    if (stored) {
+      try {
+        const sessionData = JSON.parse(stored);
+        // Handle new session format { user, expiresAt }
+        setCurrentUser(sessionData.user || sessionData);
+      } catch (e) {
+        console.error('Failed to parse session', e);
+      }
+    }
   }, []);
 
   // Admin Actions
