@@ -242,7 +242,7 @@ const MainDashboard: React.FC = () => {
     try {
         const [dashboardData, breakdownData, summaryStats] = await Promise.all([
             db.getDashboardData(timeRange.toLowerCase(), undefined, filterUserId || undefined),
-            db.getUserActivityBreakdown(timeRange.toLowerCase()),
+            db.getUserActivityBreakdown(timeRange.toLowerCase(), undefined, filterUserId || undefined),
             db.getSummaryKPIs(timeRange.toLowerCase(), undefined, filterUserId || undefined)
         ]);
         setData(dashboardData);
