@@ -23,10 +23,11 @@ export class DataService {
     }
   }
 
-  async getSummaryKPIs(range: string, shift?: string) {
+  async getSummaryKPIs(range: string, shift?: string, userId?: string | number) {
     try {
       const shiftParam = shift ? `&shift=${shift}` : '';
-      const response = await fetch(`${API_BASE}/summary/kpis?range=${range}${shiftParam}`);
+      const userParam = userId ? `&user=${userId}` : '';
+      const response = await fetch(`${API_BASE}/summary/kpis?range=${range}${shiftParam}${userParam}`);
       return await response.json();
     } catch (e) {
       console.error(e);
@@ -78,10 +79,11 @@ export class DataService {
       }
   } 
 
-  async getDashboardData(range: string, shift?: string) {
+  async getDashboardData(range: string, shift?: string, userId?: string | number) {
     try {
       const shiftParam = shift ? `&shift=${shift}` : '';
-      const response = await fetch(`${API_BASE}/dashboard?range=${range}${shiftParam}`);
+      const userParam = userId ? `&user=${userId}` : '';
+      const response = await fetch(`${API_BASE}/dashboard?range=${range}${shiftParam}${userParam}`);
       return await response.json();
     } catch (e) {
       console.error(e);
