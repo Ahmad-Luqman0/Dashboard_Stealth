@@ -22,21 +22,59 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
 
-  // Session persistence removed as per request (Start in logged out state)
-  /*
+  // Session token expiry duration
+  const SESSION_DURATION = 24 * 60 * 60 * 1000;
+
+  // Check for existing session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('er_session');
-    if (savedUser) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(savedUser));
+    const savedSession = localStorage.getItem('er_session');
+    if (savedSession) {
+      try {
+        const sessionData = JSON.parse(savedSession);
+        const { user: userData, expiresAt } = sessionData;
+        
+        // Check if session has expired
+        if (expiresAt && Date.now() < expiresAt) {
+          setIsAuthenticated(true);
+          setUser(userData);
+        } else {
+          // Session expired - clear it
+          localStorage.removeItem('er_session');
+        }
+      } catch (e) {
+        // Invalid session data - clear it
+        localStorage.removeItem('er_session');
+      }
     }
   }, []);
-  */
+
+  // Check session expiry periodically (every minute)
+  useEffect(() => {
+    const checkExpiry = () => {
+      const savedSession = localStorage.getItem('er_session');
+      if (savedSession) {
+        try {
+          const sessionData = JSON.parse(savedSession);
+          if (sessionData.expiresAt && Date.now() >= sessionData.expiresAt) {
+            handleLogout();
+          }
+        } catch (e) {
+          handleLogout();
+        }
+      }
+    };
+
+    const interval = setInterval(checkExpiry, 60 * 1000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = (userData: any) => {
+    const expiresAt = Date.now() + SESSION_DURATION;
+    const sessionData = { user: userData, expiresAt };
+    
     setIsAuthenticated(true);
     setUser(userData);
-    localStorage.setItem('er_session', JSON.stringify(userData));
+    localStorage.setItem('er_session', JSON.stringify(sessionData));
   };
 
   const handleLogout = () => {
