@@ -200,22 +200,40 @@ const ExecutiveDashboard: React.FC = () => {
   const totalTime = Number(data?.total_time || 0);
   const productiveTime = Number(data?.productive_time || 0);
 
+  // Days multiplier for custom date ranges
   const getDaysMultiplier = (range: string) => {
+    if (range.startsWith('custom:')) {
+      const parts = range.split(':');
+      if (parts.length === 3) {
+        const start = new Date(parts[1]);
+        const end = new Date(parts[2]);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+      }
+    }
     switch (range) {
       case 'daily': return 1;
       case 'yesterday': return 1;
-      case 'weekly': return 5; // Standard work week
-      case 'monthly': return 22; // Standard work month (approx)
+      case 'weekly': return 7;
+      case 'monthly': return 30;
       default: return 1;
     }
   };
 
-  const multiplier = getDaysMultiplier(selectedRange);
-  // Target = Users * 8 hours/day * 3600 seconds * Days
-  const targetSession = totalUsers > 0 ? (totalUsers * 8 * 3600 * multiplier) : (8 * 3600 * multiplier); 
-  // Fallback to 1 user if totalUsers is 0 to avoid 0 target div/0 errors, though logic handles 0 target
+  const days = getDaysMultiplier(selectedRange);
   
-  const targetProductivity = targetSession * 0.85; // 85% efficiency goal
+  // Calculate target using formula: threshold_minutes × activeUsers × days × 60 (seconds)
+  const calculateTarget = (minutesPerDay: number) => {
+    return minutesPerDay * Math.max(activeUsers, 1) * days * 60;
+  };
+
+  // Targets using the correct formula (minutes per person per day)
+  const targetSession = calculateTarget(460);        // Total time: 460 mins
+  const targetProductivity = calculateTarget(390);   // Productive time: 390 mins
+  const targetUnproductive = calculateTarget(40);    // Unproductive time: 40 mins
+  const targetNeutral = calculateTarget(20);         // Neutral time: 20 mins
+  const targetIdle = calculateTarget(10);            // Idle time: 10 mins
+  const targetBreak = calculateTarget(80);           // Break time: 80 mins
 
   const rows = [
     { 
@@ -414,10 +432,10 @@ const ExecutiveDashboard: React.FC = () => {
 
     if (rowId === 'session') {
        const breakdown = [
-           { id: 'session-unproductive', label: 'Unproductive Time', actual: data?.unproductive_time, target: targetSession * 0.1, apps: unproductiveApps, type: 'app' }, 
-           { id: 'session-neutral', label: 'Neutral & Unrated Time', actual: data?.neutral_time, target: targetSession * 0.05, apps: neutralApps, type: 'app' },
-           { id: 'session-break', label: 'Break Time', actual: data?.break_time, target: targetSession * 0.15, apps: [], type: 'app' },
-           { id: 'session-idle', label: 'Idle Time', actual: data?.idle_time, target: targetSession * 0.05, apps: topIdleUsers, type: 'user' },
+           { id: 'session-unproductive', label: 'Unproductive Time', actual: data?.unproductive_time, target: targetUnproductive, apps: unproductiveApps, type: 'app' }, 
+           { id: 'session-neutral', label: 'Neutral & Unrated Time', actual: data?.neutral_time, target: targetNeutral, apps: neutralApps, type: 'app' },
+           { id: 'session-break', label: 'Break Time', actual: data?.break_time, target: targetBreak, apps: [], type: 'app' },
+           { id: 'session-idle', label: 'Idle Time', actual: data?.idle_time, target: targetIdle, apps: topIdleUsers, type: 'user' },
        ];
        return (
            <div className="bg-blue-50/30 p-4 border-t border-slate-100">
