@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-    res.send('Eastriver Analytics API');
+    res.send('Immense Code Analytics API');
 });
 
 // Get all dashboard users
@@ -107,6 +107,12 @@ const getShiftFilter = (shift) => {
     )`;
 };
 
+// Helper for User filtering
+const getUserFilter = (userId, alias = 'ss') => {
+    if (!userId || userId === 'all' || userId === '') return '';
+    return ` AND ${alias}.user_id = ${parseInt(userId)}`;
+};
+
 
 // --- Summary Dashboard Endpoints ---
 
@@ -151,9 +157,10 @@ const getDateFilter = (range, dateCol) => {
 
 // KPIs
 app.get('/api/summary/kpis', async (req, res) => {
-  const { range = 'yesterday', shift } = req.query; 
+  const { range = 'yesterday', shift, user } = req.query; 
   const dateFilter = getDateFilter(range, 'ss.created_at::date');
   const shiftFilter = getShiftFilter(shift);
+  const userFilter = getUserFilter(user);
 
   try {
     const timeStats = await query(`
@@ -165,7 +172,7 @@ app.get('/api/summary/kpis', async (req, res) => {
         COALESCE(SUM(idle_time), 0) as idle_time,
         COALESCE(SUM(break_time), 0) as break_time
       FROM stealth_sessions ss
-      WHERE ${dateFilter} ${shiftFilter}
+      WHERE ${dateFilter} ${shiftFilter} ${userFilter}
     `);
     const row = timeStats.rows[0];
 
@@ -484,9 +491,10 @@ app.delete('/api/dashboard-users/:id', async (req, res) => {
 
 // Main Admin Dashboard Data Aggregation
 app.get('/api/dashboard', async (req, res) => {
-    const { range = 'yesterday', shift } = req.query;
+    const { range = 'yesterday', shift, user } = req.query;
     const dateFilter = getDateFilter(range, 'ss.created_at::date');
     const shiftFilter = getShiftFilter(shift);
+    const userFilter = getUserFilter(user);
     const groupCol = range === 'daily' || range === 'yesterday' ? 'EXTRACT(HOUR FROM ss.created_at)' : 'ss.created_at::date';
     const timeLabel = range === 'daily' || range === 'yesterday' ? "TO_CHAR(ss.created_at, 'HH24')" : "TO_CHAR(ss.created_at, 'Mon DD')";
 
@@ -502,7 +510,7 @@ app.get('/api/dashboard', async (req, res) => {
                 SUM(ss.break_time) as break_time,
                 COUNT(DISTINCT ss.user_id) as active_users
             FROM stealth_sessions ss
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
         `);
         const kpi = kpiQuery.rows[0];
 
@@ -554,7 +562,7 @@ app.get('/api/dashboard', async (req, res) => {
                 COALESCE(SUM(ss.idle_time), 0) / 60.0 as idle, -- Minutes
                 COALESCE(SUM(ss.break_time), 0) / 60.0 as break -- Minutes
             FROM stealth_sessions ss
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
             GROUP BY ${groupCol}, label
             ORDER BY label ASC
         `);
@@ -564,7 +572,7 @@ app.get('/api/dashboard', async (req, res) => {
         const rankingsQuery = await query(`
             SELECT u.name, SUM(ss.total_time)/3600.0 as hours
             FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
             GROUP BY u.name
             ORDER BY hours DESC
         `);
@@ -574,7 +582,7 @@ app.get('/api/dashboard', async (req, res) => {
         const idleQuery = await query(`
              SELECT u.name, (SUM(ss.idle_time)/SUM(ss.total_time)*100) as percent, SUM(ss.idle_time) as idle_seconds
              FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
-             WHERE ${dateFilter} ${shiftFilter}
+             WHERE ${dateFilter} ${shiftFilter} ${userFilter}
              GROUP BY u.name
              HAVING SUM(ss.total_time) > 0
              ORDER BY percent DESC
@@ -591,7 +599,7 @@ app.get('/api/dashboard', async (req, res) => {
         const activeUsersQuery = await query(`
             SELECT DISTINCT u.name, MAX(ss.last_updated) as last_active, SUM(ss.total_time) as duration
             FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
-            WHERE ss.last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter}
+            WHERE ss.last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter} ${userFilter}
             GROUP BY u.name
         `);
         const activeUsersList = activeUsersQuery.rows.map(r => ({
@@ -603,7 +611,7 @@ app.get('/api/dashboard', async (req, res) => {
         const lateQuery = await query(`
             SELECT u.name, MIN(ss.created_at) as start_time
             FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
             GROUP BY u.name, DATE(ss.created_at)
             ORDER BY start_time DESC
         `);
@@ -685,15 +693,18 @@ app.get('/api/dashboard', async (req, res) => {
                 )
             `;
         }
+        
+        // User filter for usage breakdown - needs to filter via session
+        const usageUserClause = user ? `AND sub.user_session_id IN (SELECT id FROM stealth_sessions WHERE user_id = ${parseInt(user)})` : '';
 
         const usageQuery = await query(`
             SELECT 
                 domain_or_app as name, 
                 category, 
                 SUM(total_time) as time,
-                (SUM(total_time) / NULLIF((SELECT SUM(total_time) FROM session_usage_breakdown sub WHERE ${dateFilter.replace(/ss\./g, 'sub.')} ${usageShiftClause}), 0) * 100) as percent
+                (SUM(total_time) / NULLIF((SELECT SUM(total_time) FROM session_usage_breakdown sub WHERE ${dateFilter.replace(/ss\./g, 'sub.')} ${usageShiftClause} ${usageUserClause}), 0) * 100) as percent
             FROM session_usage_breakdown sub
-            WHERE ${dateFilter.replace(/ss\./g, 'sub.')} ${usageShiftClause}
+            WHERE ${dateFilter.replace(/ss\./g, 'sub.')} ${usageShiftClause} ${usageUserClause}
             GROUP BY domain_or_app, category
             ORDER BY time DESC
             LIMIT 20
@@ -722,7 +733,7 @@ app.get('/api/dashboard', async (req, res) => {
                 NULLIF(SUM(ss.total_time), 0) as total
             FROM stealth_sessions ss
             JOIN users u ON ss.user_id = u.id
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
             GROUP BY u.name
             HAVING SUM(ss.total_time) > 0
         `);
