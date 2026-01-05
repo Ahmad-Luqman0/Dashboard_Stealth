@@ -301,9 +301,10 @@ app.get('/api/summary/users-activity', async (req, res) => {
 
 // Full User Activity Breakdown
 app.get('/api/summary/user-breakdown', async (req, res) => {
-    const { range = 'yesterday', shift } = req.query;
+    const { range = 'yesterday', shift, user } = req.query;
     const dateFilter = getDateFilter(range, 'ss.created_at::date');
     const shiftFilter = getShiftFilter(shift);
+    const userFilter = getUserFilter(user);
 
     try {
         // Assuming break time might be tracked in the future, for now 0
@@ -319,7 +320,7 @@ app.get('/api/summary/user-breakdown', async (req, res) => {
                 COALESCE(SUM(ss.break_time), 0) as break_time
             FROM users u
             JOIN stealth_sessions ss ON u.id = ss.user_id
-            WHERE ${dateFilter} ${shiftFilter}
+            WHERE ${dateFilter} ${shiftFilter} ${userFilter}
             GROUP BY u.id, u.name
             HAVING SUM(ss.total_time) > 0
             ORDER BY tracked DESC
