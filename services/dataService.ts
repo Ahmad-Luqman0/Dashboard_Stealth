@@ -57,10 +57,11 @@ export class DataService {
     }
   }
 
-  async getUserActivityBreakdown(range: string = 'yesterday', shift?: string) {
+  async getUserActivityBreakdown(range: string = 'yesterday', shift?: string, userId?: string | number) {
     try {
         const shiftParam = shift ? `&shift=${shift}` : '';
-        const response = await fetch(`${API_BASE}/summary/user-breakdown?range=${range}${shiftParam}`);
+        const userParam = userId ? `&user=${userId}` : '';
+        const response = await fetch(`${API_BASE}/summary/user-breakdown?range=${range}${shiftParam}${userParam}`);
         return await response.json();
     } catch (e) {
         console.error(e);
