@@ -1005,11 +1005,56 @@ app.get('/api/user-timeline', async (req, res) => {
             totalSessions++;
         });
 
-        // Convert to array and calculate work period range
+        // Convert to array and calculate work period range from all active periods
         const sessionsArray = Object.values(sessionsByDate).map(day => {
             const allSessions = day.sessions;
-            let workPeriodStart = allSessions.length > 0 ? allSessions[allSessions.length - 1].startTime : '';
-            let workPeriodEnd = allSessions.length > 0 ? allSessions[0].endTime : '';
+            
+            // Collect all active period times to find the true work period
+            const allActivePeriods = allSessions.flatMap(s => s.activePeriods || []);
+            
+            // Parse time string to comparable value
+            const parseTimeToMinutes = (timeStr) => {
+                const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if (!match) return 0;
+                let hour = parseInt(match[1]);
+                const min = parseInt(match[2]);
+                const ampm = match[3].toUpperCase();
+                if (ampm === 'PM' && hour !== 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return hour * 60 + min;
+            };
+            
+            let workPeriodStart = '';
+            let workPeriodEnd = '';
+            
+            if (allActivePeriods.length > 0) {
+                // Find earliest start and latest end from all active periods
+                let earliestStart = Infinity;
+                let latestEnd = 0;
+                let earliestStartStr = '';
+                let latestEndStr = '';
+                
+                allActivePeriods.forEach(period => {
+                    const startMins = parseTimeToMinutes(period.startTime);
+                    const endMins = parseTimeToMinutes(period.endTime);
+                    
+                    if (startMins < earliestStart) {
+                        earliestStart = startMins;
+                        earliestStartStr = period.startTime;
+                    }
+                    if (endMins > latestEnd) {
+                        latestEnd = endMins;
+                        latestEndStr = period.endTime;
+                    }
+                });
+                
+                workPeriodStart = earliestStartStr;
+                workPeriodEnd = latestEndStr;
+            } else {
+                // Fallback to session times if no active periods
+                workPeriodStart = allSessions.length > 0 ? allSessions[allSessions.length - 1].startTime : '';
+                workPeriodEnd = allSessions.length > 0 ? allSessions[0].endTime : '';
+            }
             
             return {
                 ...day,
