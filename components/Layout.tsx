@@ -71,7 +71,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <div className="p-4 border-t border-slate-100">
           <div 
             onClick={() => onNavigate('profile')}
-            className={`flex items-center gap-3 p-3 rounded-2xl overflow-hidden border cursor-pointer transition-colors group ${currentPath === 'profile' ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-200' : 'bg-blue-50/50 border-blue-100/50 hover:bg-blue-100/50'}`}
+            className={`flex items-center ${isSidebarOpen ? 'gap-3 p-3' : 'justify-center p-2'} rounded-2xl overflow-hidden border cursor-pointer transition-colors group ${currentPath === 'profile' ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-200' : 'bg-blue-50/50 border-blue-100/50 hover:bg-blue-100/50'}`}
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${currentPath === 'profile' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600 group-hover:bg-white group-hover:scale-110'}`}>
               <UserCircle size={24} strokeWidth={2} />
