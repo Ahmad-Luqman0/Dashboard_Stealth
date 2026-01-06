@@ -84,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
             )}
           </div>
           <div className="mt-4 flex items-center justify-center text-[10px] text-slate-300 font-bold tracking-widest uppercase">
-             {isSidebarOpen && <span>Immense Code v1.0</span>}
+             {isSidebarOpen && <span>Powered by Intelly</span>}
           </div>
         </div>
       </aside>
