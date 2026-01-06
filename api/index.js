@@ -574,13 +574,13 @@ app.get('/api/dashboard', async (req, res) => {
 
         // 3. User Rankings
         const rankingsQuery = await query(`
-            SELECT u.name, SUM(ss.total_time)/3600.0 as hours
+            SELECT u.id as user_id, u.name, SUM(ss.total_time)/3600.0 as hours
             FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
             WHERE ${dateFilter} ${shiftFilter} ${userFilter}
-            GROUP BY u.name
+            GROUP BY u.id, u.name
             ORDER BY hours DESC
         `);
-        const rankings = rankingsQuery.rows.map(r => ({ name: r.name, hours: Number(r.hours).toFixed(2) }));
+        const rankings = rankingsQuery.rows.map(r => ({ userId: r.user_id, name: r.name, hours: Number(r.hours).toFixed(2) }));
 
         // 4. Efficiency (Idle)
         const idleQuery = await query(`
@@ -666,8 +666,12 @@ app.get('/api/dashboard', async (req, res) => {
 
         // Not Started
         // Filter not started against the shift filtered total user list
+        // Also apply user filter if a specific user is selected
         let allUsersQuery = 'SELECT id, name FROM users WHERE active = true';
-        if (shift && shift !== 'All') {
+        if (user && user !== 'all' && user !== '') {
+            // If a specific user is selected, only check that user
+            allUsersQuery = `SELECT id, name FROM users WHERE id = ${parseInt(user)} AND active = true`;
+        } else if (shift && shift !== 'All') {
              const [start, end] = shift.split('-');
              allUsersQuery = `
                  SELECT u.id, u.name FROM users u 
@@ -680,7 +684,7 @@ app.get('/api/dashboard', async (req, res) => {
         // This await is tricky inside sync block if not careful, but we are in async fx
         const allUsers = await query(allUsersQuery);
         
-        const activeUserIdsInPeriod = (await query(`SELECT DISTINCT user_id FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter}`)).rows.map(r => r.user_id);
+        const activeUserIdsInPeriod = (await query(`SELECT DISTINCT user_id FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter} ${userFilter}`)).rows.map(r => r.user_id);
         const notStartedList = allUsers.rows
             .filter(u => !activeUserIdsInPeriod.includes(u.id))
             .map(u => ({ name: u.name }));
@@ -798,6 +802,244 @@ app.get('/api/dashboard', async (req, res) => {
     } catch (e) {
         console.error("Dashboard Error:", e);
         res.status(500).json({ error: "Failed to fetch dashboard data" });
+    }
+});
+
+// User Activity Timeline API
+app.get('/api/user-timeline', async (req, res) => {
+    const { user, range = 'daily' } = req.query;
+    
+    if (!user || user === 'all' || user === '') {
+        return res.json({ sessions: [], summary: null });
+    }
+
+    const dateFilter = getDateFilter(range, 'ss.created_at::date');
+    
+    try {
+        // Get user info
+        const userResult = await query(`SELECT id, name FROM users WHERE id = $1`, [parseInt(user)]);
+        if (userResult.rows.length === 0) {
+            return res.json({ sessions: [], summary: null, userName: 'Unknown' });
+        }
+        const userName = userResult.rows[0].name;
+
+        // Get sessions grouped by date with full session details
+        const sessionsResult = await query(`
+            SELECT 
+                ss.id,
+                ss.created_at::date as session_date,
+                ss.created_at as start_time,
+                ss.last_updated as end_time,
+                ss.total_time,
+                ss.productive_time,
+                ss.idle_time,
+                ss.break_time,
+                ss.wasted_time,
+                ss.neutral_time,
+                EXTRACT(HOUR FROM ss.created_at) as start_hour,
+                EXTRACT(MINUTE FROM ss.created_at) as start_minute,
+                EXTRACT(HOUR FROM ss.last_updated) as end_hour,
+                EXTRACT(MINUTE FROM ss.last_updated) as end_minute
+            FROM stealth_sessions ss
+            WHERE ss.user_id = $1 AND ${dateFilter}
+            ORDER BY ss.created_at DESC
+        `, [parseInt(user)]);
+
+        // Get session usage breakdown for detailed app/site data
+        const sessionIds = sessionsResult.rows.map(s => s.id);
+        let usageBreakdown = [];
+        
+        if (sessionIds.length > 0) {
+            const breakdownResult = await query(`
+                SELECT 
+                    sub.user_session_id as session_id,
+                    sub.category,
+                    sub.domain_or_app,
+                    sub.total_time,
+                    sv.start_time as visit_start,
+                    sv.end_time as visit_end
+                FROM session_usage_breakdown sub
+                LEFT JOIN session_visits sv ON sv.usage_breakdown_id = sub.id
+                WHERE sub.user_session_id = ANY($1)
+                ORDER BY sub.total_time DESC
+            `, [sessionIds]);
+            usageBreakdown = breakdownResult.rows;
+        }
+
+        // Group sessions by date
+        const sessionsByDate = {};
+        let totalActiveTime = 0;
+        let totalIdleTime = 0;
+        let totalSessions = 0;
+
+        // Format time helper
+        const formatTime = (h, m) => {
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+        };
+
+        sessionsResult.rows.forEach(session => {
+            const dateKey = new Date(session.session_date).toISOString().split('T')[0];
+            if (!sessionsByDate[dateKey]) {
+                sessionsByDate[dateKey] = {
+                    date: dateKey,
+                    displayDate: new Date(session.session_date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                    }),
+                    sessions: [],
+                    totalTime: 0,
+                    activeTime: 0,
+                    idleTime: 0,
+                    productiveTime: 0,
+                    unproductiveTime: 0,
+                    neutralTime: 0,
+                    breakdown: []
+                };
+            }
+            
+            const startHour = parseInt(session.start_hour);
+            const startMin = parseInt(session.start_minute);
+            const endHour = parseInt(session.end_hour);
+            const endMin = parseInt(session.end_minute);
+
+            // Get breakdown for this session
+            const sessionBreakdown = usageBreakdown
+                .filter(b => b.session_id === session.id)
+                .reduce((acc, item) => {
+                    if (!acc[item.category]) {
+                        acc[item.category] = [];
+                    }
+                    // Check if app already exists
+                    const existing = acc[item.category].find(a => a.name === item.domain_or_app);
+                    if (existing) {
+                        existing.time += Number(item.total_time) || 0;
+                        if (item.visit_start && item.visit_end) {
+                            existing.visits.push({ start: item.visit_start, end: item.visit_end });
+                        }
+                    } else {
+                        acc[item.category].push({
+                            name: item.domain_or_app,
+                            time: Number(item.total_time) || 0,
+                            visits: item.visit_start && item.visit_end ? [{ start: item.visit_start, end: item.visit_end }] : []
+                        });
+                    }
+                    return acc;
+                }, {});
+
+            // Get all active visits for this session (non-idle) and merge into periods
+            const activeVisits = usageBreakdown
+                .filter(b => b.session_id === session.id && b.category !== 'idle' && b.visit_start && b.visit_end)
+                .map(b => ({ start: new Date(b.visit_start), end: new Date(b.visit_end) }))
+                .sort((a, b) => a.start - b.start);
+
+            // Merge overlapping/adjacent visits into contiguous active periods
+            const activePeriods = [];
+            activeVisits.forEach(visit => {
+                if (activePeriods.length === 0) {
+                    activePeriods.push({ start: visit.start, end: visit.end });
+                } else {
+                    const lastPeriod = activePeriods[activePeriods.length - 1];
+                    // If visit overlaps or is adjacent (within 5 minutes), extend the period
+                    if (visit.start <= new Date(lastPeriod.end.getTime() + 5 * 60 * 1000)) {
+                        lastPeriod.end = new Date(Math.max(lastPeriod.end.getTime(), visit.end.getTime()));
+                    } else {
+                        activePeriods.push({ start: visit.start, end: visit.end });
+                    }
+                }
+            });
+
+            // Format active periods for display
+            const formatPeriodTime = (date) => {
+                const h = date.getHours();
+                const m = date.getMinutes();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hour12 = h % 12 || 12;
+                return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+            };
+
+            const formattedActivePeriods = activePeriods.map(p => ({
+                startTime: formatPeriodTime(p.start),
+                endTime: formatPeriodTime(p.end),
+                duration: Math.round((p.end - p.start) / 1000) // in seconds
+            }));
+
+            // If no visit data, fallback to session start/end as single period
+            const sessionActivePeriods = formattedActivePeriods.length > 0 
+                ? formattedActivePeriods 
+                : [{
+                    startTime: formatTime(startHour, startMin),
+                    endTime: formatTime(endHour, endMin),
+                    duration: (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0)
+                }];
+
+            sessionsByDate[dateKey].sessions.push({
+                id: session.id,
+                startTime: formatTime(startHour, startMin),
+                endTime: formatTime(endHour, endMin),
+                startHour: startHour + startMin / 60,
+                endHour: endHour + endMin / 60,
+                duration: Number(session.total_time) || 0,
+                activeTime: (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0),
+                idleTime: Number(session.idle_time) || 0,
+                breakTime: Number(session.break_time) || 0,
+                productiveTime: Number(session.productive_time) || 0,
+                unproductiveTime: Number(session.wasted_time) || 0,
+                neutralTime: Number(session.neutral_time) || 0,
+                breakdown: sessionBreakdown,
+                activePeriods: sessionActivePeriods
+            });
+
+            sessionsByDate[dateKey].totalTime += Number(session.total_time) || 0;
+            sessionsByDate[dateKey].activeTime += (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0);
+            sessionsByDate[dateKey].idleTime += Number(session.idle_time) || 0;
+            sessionsByDate[dateKey].productiveTime += Number(session.productive_time) || 0;
+            sessionsByDate[dateKey].unproductiveTime += Number(session.wasted_time) || 0;
+            sessionsByDate[dateKey].neutralTime += Number(session.neutral_time) || 0;
+            
+            totalActiveTime += (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0);
+            totalIdleTime += Number(session.idle_time) || 0;
+            totalSessions++;
+        });
+
+        // Convert to array and calculate work period range
+        const sessionsArray = Object.values(sessionsByDate).map(day => {
+            const allSessions = day.sessions;
+            let workPeriodStart = allSessions.length > 0 ? allSessions[allSessions.length - 1].startTime : '';
+            let workPeriodEnd = allSessions.length > 0 ? allSessions[0].endTime : '';
+            
+            return {
+                ...day,
+                sessionCount: allSessions.length,
+                workPeriod: allSessions.length > 0 ? `${workPeriodStart} - ${workPeriodEnd}` : 'N/A'
+            };
+        });
+
+        // Format duration helper
+        const formatDuration = (seconds) => {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return `${h}h ${m}m`;
+        };
+
+        res.json({
+            userName,
+            sessions: sessionsArray,
+            summary: {
+                activeTime: formatDuration(totalActiveTime),
+                activeTimeSeconds: totalActiveTime,
+                idleTime: formatDuration(totalIdleTime),
+                idleTimeSeconds: totalIdleTime,
+                totalSessions
+            }
+        });
+
+    } catch (e) {
+        console.error("User Timeline Error:", e);
+        res.status(500).json({ error: "Failed to fetch user timeline" });
     }
 });
 
