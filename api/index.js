@@ -181,21 +181,24 @@ app.get('/api/summary/kpis', async (req, res) => {
     // Other ranges: Users who had sessions in that period
     let activeUsersQuery;
     if (range === 'daily') {
-        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter}`;
+        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE last_updated >= NOW() - INTERVAL '30 minutes' ${shiftFilter} ${userFilter}`;
     } else {
-        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter}`;
+        activeUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter} ${userFilter}`;
     }
     const activeUsersResult = await query(activeUsersQuery);
     const activeUsers = activeUsersResult.rows[0].count;
 
     // 3. Logged In Users (Users who had at least one session in the selected date range)
-    const loggedInUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter}`;
+    const loggedInUsersQuery = `SELECT COUNT(DISTINCT user_id) as count FROM stealth_sessions ss WHERE ${dateFilter} ${shiftFilter} ${userFilter}`;
     const loggedInUsersResult = await query(loggedInUsersQuery);
     const loggedInUsers = loggedInUsersResult.rows[0].count;
 
     // 4. Registered Users (Total count from users table, filtered by shift if selected)
+    // If a specific user is selected, return 1 instead of total count
     let totalUsersQuery = 'SELECT COUNT(*) as count FROM users';
-    if (shift && shift !== 'All') {
+    if (user && user !== 'all' && user !== '') {
+        totalUsersQuery = 'SELECT 1 as count';
+    } else if (shift && shift !== 'All') {
         const [start, end] = shift.split('-');
         totalUsersQuery = `
             SELECT COUNT(u.id) as count 
