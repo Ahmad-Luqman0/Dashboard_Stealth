@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
-import { RefreshCcw, Download, Loader2, ExternalLink, ChevronUp, Search, User, Users, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
+import { RefreshCcw, Download, Loader2, ExternalLink, ChevronUp, ChevronRight, ChevronDown, Search, User, Users, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../services/dataService';
 import DateRangeModal from '../components/DateRangeModal';
@@ -78,7 +78,7 @@ const SimpleTrendChart: React.FC<{ data: any[]; color: string; label: string; un
   );
 };
 
-const HorizontalBarChart: React.FC<{ items: any[]; color: string; label: string; maxVal: number }> = ({ items, color, label, maxVal }) => (
+const HorizontalBarChart: React.FC<{ items: any[]; color: string; label: string; maxVal: number; onBarClick?: (item: any) => void }> = ({ items, color, label, maxVal, onBarClick }) => (
   <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm h-[400px] flex flex-col">
     <h3 className="text-sm font-bold text-slate-700 mb-4">{label}</h3>
     <div className="flex-1 w-full min-h-0">
@@ -103,7 +103,14 @@ const HorizontalBarChart: React.FC<{ items: any[]; color: string; label: string;
             cursor={{fill: 'transparent'}}
             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
           />
-          <Bar dataKey="hours" fill={color} radius={[0, 4, 4, 0]} background={{ fill: '#F8F9FA' }} />
+          <Bar 
+            dataKey="hours" 
+            fill={color} 
+            radius={[0, 4, 4, 0]} 
+            background={{ fill: '#F8F9FA' }}
+            style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+            onClick={(data) => onBarClick && onBarClick(data)}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -181,6 +188,8 @@ const MainDashboard: React.FC = () => {
   const [filterUserName, setFilterUserName] = useState<string>('All Users');
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [timelineData, setTimelineData] = useState<any>(null);
+  const [expandedTimelineRows, setExpandedTimelineRows] = useState<Set<number>>(new Set());
 
   const handleCustomRange = (start: Date, end: Date) => {
     const formatDate = (d: Date) => {
@@ -258,6 +267,15 @@ const MainDashboard: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [timeRange, filterUserId]);
+
+  // Fetch timeline data when a user is selected
+  useEffect(() => {
+    if (filterUserId) {
+      db.getUserTimeline(filterUserId, timeRange.toLowerCase()).then(setTimelineData);
+    } else {
+      setTimelineData(null);
+    }
+  }, [filterUserId, timeRange]);
 
   useEffect(() => {
     registerExportHandler(() => {
@@ -406,114 +424,117 @@ const MainDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* User Search Input */}
-          <div className="flex items-center gap-4 relative">
-            <label className="text-sm font-bold text-slate-500 uppercase tracking-tighter w-16">User:</label>
-            <div className="flex-1 relative">
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text"
-                  placeholder={filterUserId ? filterUserName : "Search users..."}
-                  value={userSearchQuery}
-                  onChange={(e) => {
-                    setUserSearchQuery(e.target.value);
-                    setUserSearchOpen(true);
-                  }}
-                  onFocus={() => setUserSearchOpen(true)}
-                  className={`w-full py-2.5 pl-9 pr-4 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium ${filterUserId ? 'text-blue-600' : ''}`}
-                />
-                {filterUserId && (
-                  <button 
-                    onClick={() => {
-                      setFilterUserId(null);
-                      setFilterUserName('All Users');
-                      setUserSearchQuery('');
+        {/* Filter Card */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+          {/* Filters Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* User Search Input */}
+            <div className="flex items-center gap-4 relative">
+              <label className="text-sm font-medium text-slate-500">User:</label>
+              <div className="flex-1 relative">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text"
+                    placeholder={filterUserId ? filterUserName : "Search users..."}
+                    value={userSearchQuery}
+                    onChange={(e) => {
+                      setUserSearchQuery(e.target.value);
+                      setUserSearchOpen(true);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              
-              {userSearchOpen && userSearchQuery.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                  <div className="max-h-60 overflow-y-auto">
+                    onFocus={() => setUserSearchOpen(true)}
+                    className={`w-full py-2 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm ${filterUserId ? 'text-blue-600 font-medium' : ''}`}
+                  />
+                  {filterUserId && (
                     <button 
                       onClick={() => {
                         setFilterUserId(null);
                         setFilterUserName('All Users');
-                        setUserSearchOpen(false);
                         setUserSearchQuery('');
                       }}
-                      className="w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 text-slate-700 border-b border-slate-100"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
-                      <Users size={14} />
-                      All Users
+                      <X size={14} />
                     </button>
-                    {allUsers
-                      .filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || 
-                                   u.name.toLowerCase().includes(userSearchQuery.toLowerCase()))
-                      .map((u) => (
-                        <button 
-                          key={u.id}
-                          onClick={() => {
-                            setFilterUserId(u.id.toString());
-                            setFilterUserName(u.name);
-                            setUserSearchOpen(false);
-                            setUserSearchQuery('');
-                          }}
-                          className={`w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 ${filterUserId === u.id.toString() ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-700'}`}
-                        >
-                          <User size={14} />
-                          {u.name}
-                        </button>
-                      ))
-                    }
-                    {allUsers.filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || u.name.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
-                      <div className="px-4 py-3 text-sm text-slate-400 text-center">No users found</div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
+                
+                {userSearchOpen && userSearchQuery.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                    <div className="max-h-60 overflow-y-auto">
+                      <button 
+                        onClick={() => {
+                          setFilterUserId(null);
+                          setFilterUserName('All Users');
+                          setUserSearchOpen(false);
+                          setUserSearchQuery('');
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 text-slate-700 border-b border-slate-100"
+                      >
+                        <Users size={14} />
+                        All Users
+                      </button>
+                      {allUsers
+                        .filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || 
+                                     u.name.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                        .map((u) => (
+                          <button 
+                            key={u.id}
+                            onClick={() => {
+                              setFilterUserId(u.id.toString());
+                              setFilterUserName(u.name);
+                              setUserSearchOpen(false);
+                              setUserSearchQuery('');
+                            }}
+                            className={`w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 ${filterUserId === u.id.toString() ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-700'}`}
+                          >
+                            <User size={14} />
+                            {u.name}
+                          </button>
+                        ))
+                      }
+                      {allUsers.filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || u.name.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-3 text-sm text-slate-400 text-center">No users found</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-slate-500">Supervisor:</label>
+              <select className="flex-1 py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                <option>All Supervisors</option>
+              </select>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-slate-500 uppercase tracking-tighter w-24">Supervisor:</label>
-            <select className="flex-1 py-2.5 px-4 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium">
-              <option>All Supervisors</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Time Range Tabs */}
-        <div className="flex gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm w-fit">
-          {['Daily', 'Yesterday', 'Weekly', 'Monthly'].map(range => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                timeRange === range 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                  : 'text-blue-600 hover:bg-blue-50 border border-transparent'
+          {/* Time Range Tabs */}
+          <div className="flex gap-2">
+            {['Daily', 'Yesterday', 'Weekly', 'Monthly'].map(range => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-8 py-2 rounded-lg text-sm font-medium border capitalize ${
+                  timeRange === range 
+                    ? 'bg-blue-600 text-white border-blue-600' 
+                    : 'text-blue-600 border-blue-100 hover:bg-blue-50'
+                }`}
+              >
+                {range}
+              </button>
+            ))}
+            <button 
+              onClick={() => setShowDateModal(true)}
+              className={`flex-1 px-8 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                timeRange.startsWith('custom:')
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'border-purple-200 text-purple-600 hover:bg-purple-50'
               }`}
             >
-              {range}
+              {timeRange.startsWith('custom:') ? `${timeRange.split(':')[1]} - ${timeRange.split(':')[2]}` : 'Custom Range'}
             </button>
-          ))}
-          <button 
-            onClick={() => setShowDateModal(true)}
-            className={`px-12 py-2.5 rounded-xl text-sm font-bold transition-all ml-4 bg-white border ${
-              timeRange.startsWith('custom:')
-                ? 'border-purple-600 text-purple-600 shadow-md shadow-purple-100'
-                : 'border-purple-200 text-purple-600 hover:bg-purple-50'
-            }`}
-          >
-            {timeRange.startsWith('custom:') ? `${timeRange.split(':')[1]} - ${timeRange.split(':')[2]}` : 'Custom Range'}
-          </button>
+          </div>
         </div>
 
         <DateRangeModal
@@ -538,7 +559,8 @@ const MainDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* User Status Panels */}
+      {/* User Status Panels - Only show for Daily/Yesterday */}
+      {(timeRange === 'Daily' || timeRange === 'Yesterday') && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
         {/* Active Users */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[400px]">
@@ -639,6 +661,7 @@ const MainDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Analytical Trends Section (Original Scroll Down Content) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -648,10 +671,201 @@ const MainDashboard: React.FC = () => {
         <SimpleTrendChart data={data.trends.break} color="#ef4444" label="Break Time Trend" unit="m" />
       </div>
 
+      {/* Activity Timeline - Only show when a user is selected */}
+      {filterUserId && timelineData && timelineData.sessions && timelineData.sessions.length > 0 && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100">
+            <h2 className="text-lg font-bold text-slate-800">Activity Timeline - {timelineData.userName || filterUserName}</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {timelineData.sessions.length} day{timelineData.sessions.length > 1 ? 's' : ''} timeline - Track work periods across multiple days
+            </p>
+          </div>
+          
+          {/* Sessions Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 text-left w-12">Action</th>
+                  <th className="px-4 py-3 text-left w-32">Date</th>
+                  <th className="px-4 py-3 text-left w-20">Duration</th>
+                  <th className="px-4 py-3 text-left w-40">Work Period</th>
+                  <th className="px-4 py-3 text-left">Timeline (24 Hour View)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {timelineData.sessions.map((day: any, idx: number) => {
+                  const isExpanded = expandedTimelineRows.has(idx);
+                  const toggleExpand = () => {
+                    setExpandedTimelineRows(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(idx)) {
+                        newSet.delete(idx);
+                      } else {
+                        newSet.add(idx);
+                      }
+                      return newSet;
+                    });
+                  };
+                  
+                  return (
+                    <React.Fragment key={idx}>
+                      <tr className="hover:bg-slate-50">
+                        <td className="px-4 py-4">
+                          <button 
+                            onClick={toggleExpand}
+                            className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                            title={isExpanded ? 'Collapse' : 'Expand'}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown size={16} className="text-blue-600" />
+                            ) : (
+                              <ChevronRight size={16} className="text-blue-600" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="font-medium text-slate-800">{day.displayDate}</p>
+                          <p className="text-xs text-slate-400">{day.sessionCount} session{day.sessionCount > 1 ? 's' : ''}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="font-bold text-green-600">{formatDuration(day.totalTime)}</span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-600">{day.workPeriod}</td>
+                        <td className="px-4 py-4">
+                          {/* 24 Hour Timeline Bar */}
+                          {/* Labels above timeline */}
+                          <div className="flex justify-between mb-1 text-[9px] text-slate-400">
+                            <span>2 AM</span>
+                            <span>6 AM</span>
+                            <span>10 AM</span>
+                            <span>2 PM</span>
+                            <span>6 PM</span>
+                            <span>10 PM</span>
+                          </div>
+                          <div className="relative h-6 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                            {/* Active periods only - green bars */}
+                            {day.sessions.flatMap((session: any, sIdx: number) => 
+                              (session.activePeriods || []).map((period: any, pIdx: number) => {
+                                // Parse time to get hour position
+                                const parseTime = (timeStr: string) => {
+                                  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                  if (!match) return 0;
+                                  let hour = parseInt(match[1]);
+                                  const min = parseInt(match[2]);
+                                  const ampm = match[3].toUpperCase();
+                                  if (ampm === 'PM' && hour !== 12) hour += 12;
+                                  if (ampm === 'AM' && hour === 12) hour = 0;
+                                  return hour + min / 60;
+                                };
+                                
+                                const startHour = parseTime(period.startTime);
+                                const endHour = parseTime(period.endTime);
+                                const startPct = (startHour / 24) * 100;
+                                const widthPct = Math.max(((endHour - startHour) / 24) * 100, 0.5);
+                                
+                                return (
+                                  <div
+                                    key={`${sIdx}-${pIdx}`}
+                                    className="absolute top-1 bottom-1 bg-green-500 rounded"
+                                    style={{
+                                      left: `${startPct}%`,
+                                      width: `${widthPct}%`
+                                    }}
+                                    title={`Active: ${period.startTime} - ${period.endTime}`}
+                                  />
+                                );
+                              })
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      {/* Expandable Activity Breakdown Row */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={5} className="p-6">
+                            <h4 className="text-sm font-bold text-slate-700 mb-4">
+                              Activity Breakdown - {day.displayDate}
+                            </h4>
+                            
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                              <div className="bg-white p-4 rounded-xl border border-slate-100">
+                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Time</p>
+                                <p className="text-2xl font-bold text-green-600 mt-1">{formatDuration(day.activeTime)}</p>
+                              </div>
+                              <div className="bg-white p-4 rounded-xl border border-slate-100">
+                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Idle Time</p>
+                                <p className="text-2xl font-bold text-slate-600 mt-1">{formatDuration(day.idleTime)}</p>
+                              </div>
+                              <div className="bg-white p-4 rounded-xl border border-slate-100">
+                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sessions</p>
+                                <p className="text-2xl font-bold text-blue-600 mt-1">{day.sessionCount}</p>
+                              </div>
+                            </div>
+
+                            {/* All Periods Bar */}
+                            <div>
+                              <p className="text-xs font-bold text-slate-600 mb-2">All Periods</p>
+                              <div className="space-y-2">
+                                {/* Show each individual active period from all sessions */}
+                                {day.sessions.flatMap((session: any, sIdx: number) => 
+                                  (session.activePeriods || [{ startTime: session.startTime, endTime: session.endTime, duration: session.activeTime }])
+                                    .map((period: any, pIdx: number) => (
+                                      <div key={`${sIdx}-${pIdx}`} className="flex items-center justify-between py-1">
+                                        <span className="text-xs text-green-600 flex items-center gap-1">
+                                          <span className="w-2 h-2 bg-green-500 rounded-full"></span> Active
+                                        </span>
+                                        <span className="text-xs text-slate-500">{period.startTime} - {period.endTime}</span>
+                                        <span className="text-xs font-bold text-slate-600">{formatDuration(period.duration)}</span>
+                                      </div>
+                                    ))
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* User Rankings Section */}
       <div className="space-y-8">
-        <HorizontalBarChart items={data.rankings.topUsers} color="#3b82f6" label="Top Users by Tracked Hours" maxVal={9} />
-        <HorizontalBarChart items={data.rankings.bottomUsers} color="#ef4444" label="Bottom Users by Tracked Hours" maxVal={3.5} />
+        <HorizontalBarChart 
+          items={data.rankings.topUsers} 
+          color="#3b82f6" 
+          label="Top Users by Tracked Hours" 
+          maxVal={9} 
+          onBarClick={(item) => {
+            if (item?.userId) {
+              setFilterUserId(item.userId);
+              setFilterUserName(item.name);
+              setUserSearchQuery('');
+              setExpandedTimelineRows(new Set());
+            }
+          }}
+        />
+        <HorizontalBarChart 
+          items={data.rankings.bottomUsers} 
+          color="#ef4444" 
+          label="Bottom Users by Tracked Hours" 
+          maxVal={3.5}
+          onBarClick={(item) => {
+            if (item?.userId) {
+              setFilterUserId(item.userId);
+              setFilterUserName(item.name);
+              setUserSearchQuery('');
+              setExpandedTimelineRows(new Set());
+            }
+          }}
+        />
       </div>
 
       {/* High-Level Productivity Gauges */}
