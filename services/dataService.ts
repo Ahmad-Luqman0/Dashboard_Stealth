@@ -166,6 +166,16 @@ export class DataService {
       return [];
     }
   }
+
+  async getUserTimeline(userId: string | number, range: string) {
+    try {
+      const response = await fetch(`${API_BASE}/user-timeline?user=${userId}&range=${range}`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { sessions: [], summary: null };
+    }
+  }
 }
 
 export const db = new DataService();
