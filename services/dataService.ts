@@ -80,11 +80,12 @@ export class DataService {
       }
   } 
 
-  async getDashboardData(range: string, shift?: string, userId?: string | number) {
+  async getDashboardData(range: string, shift?: string, userId?: string | number, timezone?: string) {
     try {
       const shiftParam = shift ? `&shift=${shift}` : '';
       const userParam = userId ? `&user=${userId}` : '';
-      const response = await fetch(`${API_BASE}/dashboard?range=${range}${shiftParam}${userParam}`);
+      const tzParam = timezone ? `&timezone=${encodeURIComponent(timezone)}` : '';
+      const response = await fetch(`${API_BASE}/dashboard?range=${range}${shiftParam}${userParam}${tzParam}`);
       return await response.json();
     } catch (e) {
       console.error(e);
