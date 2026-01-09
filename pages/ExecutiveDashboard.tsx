@@ -2,6 +2,7 @@
 import React from 'react';
 import { Download, RefreshCcw, Maximize2, Minimize2, ChevronRight, X } from 'lucide-react';
 import { useExport } from '../contexts/ExportContext';
+import { useTimezone } from '../contexts/TimezoneContext';
 import DateRangeModal from '../components/DateRangeModal';
 
 const ExecutiveDashboard: React.FC = () => {
@@ -623,6 +624,7 @@ const ExecutiveDashboard: React.FC = () => {
 
   // Export Logic
   const { registerExportHandler, triggerExport } = useExport();
+  const { formatDateTime } = useTimezone();
 
   React.useEffect(() => {
     registerExportHandler(() => {
@@ -660,7 +662,7 @@ const ExecutiveDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-blue-600">Executive Dashboard</h1>
         <div className="flex items-center gap-4 text-xs text-slate-400">
-          <span>Last updated: {new Date().toLocaleString()}</span>
+          <span>Last updated: {formatDateTime(new Date())}</span>
           <button onClick={fetchData} className="p-1.5 hover:bg-slate-100 rounded transition-colors"><RefreshCcw size={14} /></button>
           <button onClick={triggerExport} className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors font-bold text-slate-800">
             <Download size={14} />
