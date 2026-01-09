@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
+import { useTimezone } from '../contexts/TimezoneContext';
 import { RefreshCcw, Download, Loader2, ExternalLink, ChevronUp, ChevronRight, ChevronDown, Search, User, Users, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { db } from '../services/dataService';
@@ -240,6 +241,7 @@ const MainDashboard: React.FC = () => {
   };
 
   const { registerExportHandler, triggerExport } = useExport();
+  const { formatDateTime, formatTime, timezone } = useTimezone();
 
   // Fetch all users for the dropdown on mount
   useEffect(() => {
@@ -268,14 +270,14 @@ const MainDashboard: React.FC = () => {
     fetchData();
   }, [timeRange, filterUserId]);
 
-  // Fetch timeline data when a user is selected
+  // Fetch timeline data when a user is selected or timezone changes
   useEffect(() => {
     if (filterUserId) {
-      db.getUserTimeline(filterUserId, timeRange.toLowerCase()).then(setTimelineData);
+      db.getUserTimeline(filterUserId, timeRange.toLowerCase(), timezone).then(setTimelineData);
     } else {
       setTimelineData(null);
     }
-  }, [filterUserId, timeRange]);
+  }, [filterUserId, timeRange, timezone]);
 
   useEffect(() => {
     registerExportHandler(() => {
@@ -415,7 +417,7 @@ const MainDashboard: React.FC = () => {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-black text-blue-600 tracking-tight">Admin Dashboard</h1>
           <div className="flex items-center gap-4 text-xs text-slate-400 font-bold">
-            <span>Last updated: {new Date().toLocaleString()}</span>
+            <span>Last updated: {formatDateTime(new Date())}</span>
             <button onClick={fetchData} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"><RefreshCcw size={14} /></button>
             <button onClick={triggerExport} className="flex items-center gap-2 border border-slate-300 px-4 py-2 rounded-xl hover:bg-slate-50 transition-all bg-white font-bold text-slate-800 shadow-sm">
               <Download size={14} />
@@ -747,20 +749,26 @@ const MainDashboard: React.FC = () => {
                             {/* Active periods only - green bars */}
                             {day.sessions.flatMap((session: any, sIdx: number) => 
                               (session.activePeriods || []).map((period: any, pIdx: number) => {
-                                // Parse time to get hour position
-                                const parseTime = (timeStr: string) => {
-                                  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-                                  if (!match) return 0;
-                                  let hour = parseInt(match[1]);
-                                  const min = parseInt(match[2]);
-                                  const ampm = match[3].toUpperCase();
-                                  if (ampm === 'PM' && hour !== 12) hour += 12;
-                                  if (ampm === 'AM' && hour === 12) hour = 0;
-                                  return hour + min / 60;
-                                };
+                                // Use API-provided hour values (already timezone-adjusted) or fallback to parsing
+                                let startHour = period.startHour;
+                                let endHour = period.endHour;
                                 
-                                const startHour = parseTime(period.startTime);
-                                const endHour = parseTime(period.endTime);
+                                // Fallback to parsing if hour values not provided
+                                if (startHour === undefined || endHour === undefined) {
+                                  const parseTime = (timeStr: string) => {
+                                    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                    if (!match) return 0;
+                                    let hour = parseInt(match[1]);
+                                    const min = parseInt(match[2]);
+                                    const ampm = match[3].toUpperCase();
+                                    if (ampm === 'PM' && hour !== 12) hour += 12;
+                                    if (ampm === 'AM' && hour === 12) hour = 0;
+                                    return hour + min / 60;
+                                  };
+                                  startHour = parseTime(period.startTime);
+                                  endHour = parseTime(period.endTime);
+                                }
+                                
                                 const startPct = (startHour / 24) * 100;
                                 const widthPct = Math.max(((endHour - startHour) / 24) * 100, 0.5);
                                 
