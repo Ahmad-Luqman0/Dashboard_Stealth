@@ -807,7 +807,7 @@ app.get('/api/dashboard', async (req, res) => {
 
 // User Activity Timeline API
 app.get('/api/user-timeline', async (req, res) => {
-    const { user, range = 'daily' } = req.query;
+    const { user, range = 'daily', timezone = 'UTC' } = req.query;
     
     if (!user || user === 'all' || user === '') {
         return res.json({ sessions: [], summary: null });
@@ -815,6 +815,42 @@ app.get('/api/user-timeline', async (req, res) => {
 
     const dateFilter = getDateFilter(range, 'ss.created_at::date');
     
+    // Timezone-aware time formatting helper
+    const formatTimeInTimezone = (date, tz) => {
+        try {
+            return new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: tz
+            }).format(date);
+        } catch (e) {
+            // Fallback for invalid timezone
+            const h = date.getUTCHours();
+            const m = date.getUTCMinutes();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+        }
+    };
+    
+    // Get hour in timezone (for timeline bar positioning)
+    const getHourInTimezone = (date, tz) => {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false,
+                timeZone: tz
+            }).formatToParts(date);
+            const hour = parseInt(parts.find(p => p.type === 'hour')?.value || 0);
+            const minute = parseInt(parts.find(p => p.type === 'minute')?.value || 0);
+            return hour + minute / 60;
+        } catch (e) {
+            return date.getUTCHours() + date.getUTCMinutes() / 60;
+        }
+    };
+
     try {
         // Get user info
         const userResult = await query(`SELECT id, name FROM users WHERE id = $1`, [parseInt(user)]);
@@ -835,11 +871,7 @@ app.get('/api/user-timeline', async (req, res) => {
                 ss.idle_time,
                 ss.break_time,
                 ss.wasted_time,
-                ss.neutral_time,
-                EXTRACT(HOUR FROM ss.created_at) as start_hour,
-                EXTRACT(MINUTE FROM ss.created_at) as start_minute,
-                EXTRACT(HOUR FROM ss.last_updated) as end_hour,
-                EXTRACT(MINUTE FROM ss.last_updated) as end_minute
+                ss.neutral_time
             FROM stealth_sessions ss
             WHERE ss.user_id = $1 AND ${dateFilter}
             ORDER BY ss.created_at DESC
@@ -872,12 +904,8 @@ app.get('/api/user-timeline', async (req, res) => {
         let totalIdleTime = 0;
         let totalSessions = 0;
 
-        // Format time helper
-        const formatTime = (h, m) => {
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            const hour12 = h % 12 || 12;
-            return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
-        };
+        // Format time helper - now uses timezone
+        const formatTime = (date) => formatTimeInTimezone(new Date(date), timezone);
 
         sessionsResult.rows.forEach(session => {
             const dateKey = new Date(session.session_date).toISOString().split('T')[0];
@@ -901,10 +929,9 @@ app.get('/api/user-timeline', async (req, res) => {
                 };
             }
             
-            const startHour = parseInt(session.start_hour);
-            const startMin = parseInt(session.start_minute);
-            const endHour = parseInt(session.end_hour);
-            const endMin = parseInt(session.end_minute);
+            // Use actual timestamps for timezone conversion
+            const startDate = new Date(session.start_time);
+            const endDate = new Date(session.end_time);
 
             // Get breakdown for this session
             const sessionBreakdown = usageBreakdown
@@ -952,18 +979,12 @@ app.get('/api/user-timeline', async (req, res) => {
                 }
             });
 
-            // Format active periods for display
-            const formatPeriodTime = (date) => {
-                const h = date.getHours();
-                const m = date.getMinutes();
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                const hour12 = h % 12 || 12;
-                return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
-            };
-
+            // Format active periods for display - now timezone-aware
             const formattedActivePeriods = activePeriods.map(p => ({
-                startTime: formatPeriodTime(p.start),
-                endTime: formatPeriodTime(p.end),
+                startTime: formatTimeInTimezone(p.start, timezone),
+                endTime: formatTimeInTimezone(p.end, timezone),
+                startHour: getHourInTimezone(p.start, timezone),
+                endHour: getHourInTimezone(p.end, timezone),
                 duration: Math.round((p.end - p.start) / 1000) // in seconds
             }));
 
@@ -971,17 +992,19 @@ app.get('/api/user-timeline', async (req, res) => {
             const sessionActivePeriods = formattedActivePeriods.length > 0 
                 ? formattedActivePeriods 
                 : [{
-                    startTime: formatTime(startHour, startMin),
-                    endTime: formatTime(endHour, endMin),
+                    startTime: formatTimeInTimezone(startDate, timezone),
+                    endTime: formatTimeInTimezone(endDate, timezone),
+                    startHour: getHourInTimezone(startDate, timezone),
+                    endHour: getHourInTimezone(endDate, timezone),
                     duration: (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0)
                 }];
 
             sessionsByDate[dateKey].sessions.push({
                 id: session.id,
-                startTime: formatTime(startHour, startMin),
-                endTime: formatTime(endHour, endMin),
-                startHour: startHour + startMin / 60,
-                endHour: endHour + endMin / 60,
+                startTime: formatTimeInTimezone(startDate, timezone),
+                endTime: formatTimeInTimezone(endDate, timezone),
+                startHour: getHourInTimezone(startDate, timezone),
+                endHour: getHourInTimezone(endDate, timezone),
                 duration: Number(session.total_time) || 0,
                 activeTime: (Number(session.total_time) || 0) - (Number(session.idle_time) || 0) - (Number(session.break_time) || 0),
                 idleTime: Number(session.idle_time) || 0,
