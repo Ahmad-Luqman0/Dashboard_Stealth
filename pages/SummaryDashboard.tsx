@@ -50,7 +50,26 @@ const SummaryDashboard: React.FC = () => {
   }, [selectedRange, selectedShift]);
 
   const { registerExportHandler, triggerExport } = useExport();
-  const { formatDateTime } = useTimezone();
+  const { formatDateTime, timezone } = useTimezone();
+
+  // Helper to convert UTC time (HH:MM:SS) to timezone-aware formatted time
+  const formatShiftTimeInTimezone = (timeStr: string) => {
+    try {
+      // Parse the time string (format: HH:MM:SS)
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      // Create a date object with the UTC time on a fixed date
+      const utcDate = new Date(Date.UTC(2000, 0, 1, hours, minutes, 0));
+      // Format in the selected timezone
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone
+      }).format(utcDate);
+    } catch (e) {
+      return timeStr; // Fallback to original if conversion fails
+    }
+  };
 
   useEffect(() => {
     registerExportHandler(() => {
@@ -328,7 +347,7 @@ const SummaryDashboard: React.FC = () => {
             <option value="All">All</option>
             {shifts.map((s, i) => (
                 <option key={i} value={`${s.shift_start}-${s.shift_end}`}>
-                    {s.shift_start} - {s.shift_end}
+                    {formatShiftTimeInTimezone(s.shift_start)} - {formatShiftTimeInTimezone(s.shift_end)}
                 </option>
             ))}
           </select>
