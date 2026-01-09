@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, BarChart3, PieChart, LogOut, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, PieChart, LogOut, ChevronLeft, ChevronRight, UserCircle, Globe } from 'lucide-react';
 import { useExport } from '../contexts/ExportContext';
+import { useTimezone, TIMEZONE_OPTIONS } from '../contexts/TimezoneContext';
 
 import { db } from '../services/dataService'; // Ensure this import exists
 
@@ -17,6 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [user, setUser] = React.useState<any>(null);
   const { triggerExport } = useExport();
+  const { timezone, setTimezone } = useTimezone();
   
   React.useEffect(() => {
     try {
@@ -96,13 +98,30 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
           <div className="text-sm font-semibold text-slate-500">
             {menuItems.find(item => item.id === currentPath)?.label || 'Dashboard'}
           </div>
-          <button 
-            onClick={onLogout}
-            className="flex items-center gap-2 text-red-500 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Timezone Dropdown */}
+            <div className="flex items-center gap-2">
+              <Globe size={16} className="text-slate-400" />
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg py-1.5 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-600 cursor-pointer"
+              >
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={onLogout}
+              className="flex items-center gap-2 text-red-500 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
         </header>
 
         {/* Scrollable Area */}
