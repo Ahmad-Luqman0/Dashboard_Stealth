@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
+import { useTimezone } from '../contexts/TimezoneContext';
 import KPICard from '../components/KPICard';
 import { Download, ExternalLink, RefreshCcw, Loader2 } from 'lucide-react';
 import { db } from '../services/dataService';
@@ -49,6 +50,7 @@ const SummaryDashboard: React.FC = () => {
   }, [selectedRange, selectedShift]);
 
   const { registerExportHandler, triggerExport } = useExport();
+  const { formatDateTime } = useTimezone();
 
   useEffect(() => {
     registerExportHandler(() => {
@@ -305,7 +307,7 @@ const SummaryDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Summary Dashboard</h1>
         <div className="flex items-center gap-4 text-xs text-slate-400">
-          <span>Last updated: {new Date().toLocaleString()}</span>
+          <span>Last updated: {formatDateTime(new Date())}</span>
           <button onClick={fetchSummary} className="p-1.5 hover:bg-slate-100 rounded transition-colors"><RefreshCcw size={14} /></button>
           <button onClick={triggerExport} className="flex items-center gap-2 border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors font-bold text-slate-800">
             <Download size={14} />
