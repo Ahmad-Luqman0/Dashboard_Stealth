@@ -611,15 +611,18 @@ app.get('/api/dashboard', async (req, res) => {
             duration: formatTime(r.duration)
         }));
 
-        // Started Late (First session > 9:00 AM)
+        // Started Late (First session > user's shift_start from user_shifts table)
         const lateQuery = await query(`
-            SELECT u.name, MIN(ss.created_at) as start_time
-            FROM stealth_sessions ss JOIN users u ON ss.user_id = u.id
+            SELECT u.id as user_id, u.name, MIN(ss.created_at) as start_time,
+                   COALESCE(us.shift_start, '09:00:00') as shift_start,
+                   COALESCE(us.shift_end, '17:00:00') as shift_end
+            FROM stealth_sessions ss 
+            JOIN users u ON ss.user_id = u.id
+            LEFT JOIN user_shifts us ON u.id = us.user_id
             WHERE ${dateFilter} ${shiftFilter} ${userFilter}
-            GROUP BY u.name, DATE(ss.created_at)
+            GROUP BY u.id, u.name, us.shift_start, us.shift_end, DATE(ss.created_at)
             ORDER BY start_time DESC
         `);
-        const SHIFT_START_HOUR = 9; // 9 AM Default
         const PKT_OFFSET_HOURS = 5; // Pakistan Standard Time (UTC+5)
         
         const startedLateList = lateQuery.rows
@@ -630,7 +633,13 @@ app.get('/api/dashboard', async (req, res) => {
                 const utcMinutes = date.getUTCMinutes();
                 const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
                 const totalMinutes = pktHours * 60 + utcMinutes;
-                const targetMinutes = SHIFT_START_HOUR * 60;
+                
+                // Parse user's shift_start time (format: HH:MM:SS)
+                const shiftParts = r.shift_start.split(':');
+                const shiftStartHour = parseInt(shiftParts[0], 10);
+                const shiftStartMinute = parseInt(shiftParts[1], 10);
+                const targetMinutes = shiftStartHour * 60 + shiftStartMinute;
+                
                 return totalMinutes > targetMinutes;
             })
             .map(r => {
@@ -640,7 +649,12 @@ app.get('/api/dashboard', async (req, res) => {
                 const utcMinutes = date.getUTCMinutes();
                 const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
                 const totalMinutes = pktHours * 60 + utcMinutes;
-                const targetMinutes = SHIFT_START_HOUR * 60;
+                
+                // Parse user's shift_start time (format: HH:MM:SS)
+                const shiftParts = r.shift_start.split(':');
+                const shiftStartHour = parseInt(shiftParts[0], 10);
+                const shiftStartMinute = parseInt(shiftParts[1], 10);
+                const targetMinutes = shiftStartHour * 60 + shiftStartMinute;
                 const diff = totalMinutes - targetMinutes;
                 
                 let delayStr;
@@ -655,9 +669,14 @@ app.get('/api/dashboard', async (req, res) => {
                 // Format time in PKT
                 const pktTimeStr = `${pktHours > 12 ? pktHours - 12 : pktHours}:${String(utcMinutes).padStart(2, '0')} ${pktHours >= 12 ? 'PM' : 'AM'}`;
                 
+                // Format scheduled time from user's shift_start
+                const schedHour = shiftStartHour > 12 ? shiftStartHour - 12 : (shiftStartHour === 0 ? 12 : shiftStartHour);
+                const schedAmPm = shiftStartHour >= 12 ? 'PM' : 'AM';
+                const scheduledStr = `${String(schedHour).padStart(2, '0')}:${String(shiftStartMinute).padStart(2, '0')} ${schedAmPm}`;
+                
                 return {
                     name: r.name,
-                    scheduled: '09:00 AM',
+                    scheduled: scheduledStr,
                     started: pktTimeStr,
                     delay: delayStr,
                     dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Karachi' })
