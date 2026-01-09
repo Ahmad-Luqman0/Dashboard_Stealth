@@ -495,12 +495,48 @@ app.delete('/api/dashboard-users/:id', async (req, res) => {
 
 // Main Admin Dashboard Data Aggregation
 app.get('/api/dashboard', async (req, res) => {
-    const { range = 'yesterday', shift, user } = req.query;
+    const { range = 'yesterday', shift, user, timezone = 'Asia/Karachi' } = req.query;
     const dateFilter = getDateFilter(range, 'ss.created_at::date');
     const shiftFilter = getShiftFilter(shift);
     const userFilter = getUserFilter(user);
     const groupCol = range === 'daily' || range === 'yesterday' ? 'EXTRACT(HOUR FROM ss.created_at)' : 'ss.created_at::date';
     const timeLabel = range === 'daily' || range === 'yesterday' ? "TO_CHAR(ss.created_at, 'HH24')" : "TO_CHAR(ss.created_at, 'Mon DD')";
+
+    // Timezone-aware time formatting helper
+    const formatTimeInTimezone = (date, tz) => {
+        try {
+            return new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: tz
+            }).format(date);
+        } catch (e) {
+            // Fallback for invalid timezone - use UTC
+            const h = date.getUTCHours();
+            const m = date.getUTCMinutes();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+        }
+    };
+
+    // Get hour and minute in timezone for calculations
+    const getTimePartsInTimezone = (date, tz) => {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false,
+                timeZone: tz
+            }).formatToParts(date);
+            const hour = parseInt(parts.find(p => p.type === 'hour')?.value || 0);
+            const minute = parseInt(parts.find(p => p.type === 'minute')?.value || 0);
+            return { hour, minute };
+        } catch (e) {
+            return { hour: date.getUTCHours(), minute: date.getUTCMinutes() };
+        }
+    };
 
     try {
         // 1. KPIs
@@ -612,10 +648,11 @@ app.get('/api/dashboard', async (req, res) => {
         }));
 
         // Started Late (First session > user's shift_start from user_shifts table)
+        // Shift times in DB are stored as UTC, need to convert to selected timezone
         const lateQuery = await query(`
             SELECT u.id as user_id, u.name, MIN(ss.created_at) as start_time,
-                   COALESCE(us.shift_start, '09:00:00') as shift_start,
-                   COALESCE(us.shift_end, '17:00:00') as shift_end
+                   COALESCE(us.shift_start, '04:00:00') as shift_start,
+                   COALESCE(us.shift_end, '12:00:00') as shift_end
             FROM stealth_sessions ss 
             JOIN users u ON ss.user_id = u.id
             LEFT JOIN user_shifts us ON u.id = us.user_id
@@ -623,39 +660,59 @@ app.get('/api/dashboard', async (req, res) => {
             GROUP BY u.id, u.name, us.shift_start, us.shift_end, DATE(ss.created_at)
             ORDER BY start_time DESC
         `);
-        const PKT_OFFSET_HOURS = 5; // Pakistan Standard Time (UTC+5)
+        
+        // Helper to convert UTC time (HH:MM:SS) to timezone-adjusted time parts
+        const convertShiftTimeToTimezone = (timeStr, tz) => {
+            // Create a date object with the UTC time on a fixed date (2000-01-01)
+            const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+            const utcDate = new Date(Date.UTC(2000, 0, 1, hours, minutes, seconds || 0));
+            
+            // Use Intl to get the time in the target timezone
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hour12: false,
+                    timeZone: tz
+                }).formatToParts(utcDate);
+                const hour = parseInt(parts.find(p => p.type === 'hour')?.value || 0);
+                const minute = parseInt(parts.find(p => p.type === 'minute')?.value || 0);
+                return { hour, minute };
+            } catch (e) {
+                return { hour: hours, minute: minutes };
+            }
+        };
+        
+        // Helper to format time in 12-hour format
+        const formatTime12Hour = (hour, minute) => {
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+            return `${String(hour12).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${ampm}`;
+        };
         
         const startedLateList = lateQuery.rows
             .filter(r => {
                 const date = new Date(r.start_time);
-                // Use UTC hours + PKT offset for consistent timezone handling
-                const utcHours = date.getUTCHours();
-                const utcMinutes = date.getUTCMinutes();
-                const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
-                const totalMinutes = pktHours * 60 + utcMinutes;
+                // Get session start time in the selected timezone
+                const { hour, minute } = getTimePartsInTimezone(date, timezone);
+                const sessionMinutes = hour * 60 + minute;
                 
-                // Parse user's shift_start time (format: HH:MM:SS)
-                const shiftParts = r.shift_start.split(':');
-                const shiftStartHour = parseInt(shiftParts[0], 10);
-                const shiftStartMinute = parseInt(shiftParts[1], 10);
-                const targetMinutes = shiftStartHour * 60 + shiftStartMinute;
+                // Convert shift_start from UTC to selected timezone
+                const shiftInTz = convertShiftTimeToTimezone(r.shift_start, timezone);
+                const targetMinutes = shiftInTz.hour * 60 + shiftInTz.minute;
                 
-                return totalMinutes > targetMinutes;
+                return sessionMinutes > targetMinutes;
             })
             .map(r => {
                 const date = new Date(r.start_time);
-                // Use UTC hours + PKT offset for consistent timezone handling
-                const utcHours = date.getUTCHours();
-                const utcMinutes = date.getUTCMinutes();
-                const pktHours = (utcHours + PKT_OFFSET_HOURS) % 24;
-                const totalMinutes = pktHours * 60 + utcMinutes;
+                // Get session start time in the selected timezone
+                const { hour, minute } = getTimePartsInTimezone(date, timezone);
+                const sessionMinutes = hour * 60 + minute;
                 
-                // Parse user's shift_start time (format: HH:MM:SS)
-                const shiftParts = r.shift_start.split(':');
-                const shiftStartHour = parseInt(shiftParts[0], 10);
-                const shiftStartMinute = parseInt(shiftParts[1], 10);
-                const targetMinutes = shiftStartHour * 60 + shiftStartMinute;
-                const diff = totalMinutes - targetMinutes;
+                // Convert shift_start from UTC to selected timezone
+                const shiftInTz = convertShiftTimeToTimezone(r.shift_start, timezone);
+                const targetMinutes = shiftInTz.hour * 60 + shiftInTz.minute;
+                const diff = sessionMinutes - targetMinutes;
                 
                 let delayStr;
                 if (diff >= 60) {
@@ -666,20 +723,18 @@ app.get('/api/dashboard', async (req, res) => {
                     delayStr = `${diff}m late`;
                 }
                 
-                // Format time in PKT
-                const pktTimeStr = `${pktHours > 12 ? pktHours - 12 : pktHours}:${String(utcMinutes).padStart(2, '0')} ${pktHours >= 12 ? 'PM' : 'AM'}`;
+                // Format started time using dynamic timezone
+                const startedTimeStr = formatTimeInTimezone(date, timezone);
                 
-                // Format scheduled time from user's shift_start
-                const schedHour = shiftStartHour > 12 ? shiftStartHour - 12 : (shiftStartHour === 0 ? 12 : shiftStartHour);
-                const schedAmPm = shiftStartHour >= 12 ? 'PM' : 'AM';
-                const scheduledStr = `${String(schedHour).padStart(2, '0')}:${String(shiftStartMinute).padStart(2, '0')} ${schedAmPm}`;
+                // Format scheduled time (shift_start converted to selected timezone)
+                const scheduledStr = formatTime12Hour(shiftInTz.hour, shiftInTz.minute);
                 
                 return {
                     name: r.name,
                     scheduled: scheduledStr,
-                    started: pktTimeStr,
+                    started: startedTimeStr,
                     delay: delayStr,
-                    dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Karachi' })
+                    dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: timezone })
                 };
             });
 
