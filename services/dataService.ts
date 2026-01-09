@@ -167,9 +167,9 @@ export class DataService {
     }
   }
 
-  async getUserTimeline(userId: string | number, range: string) {
+  async getUserTimeline(userId: string | number, range: string, timezone: string = 'UTC') {
     try {
-      const response = await fetch(`${API_BASE}/user-timeline?user=${userId}&range=${range}`);
+      const response = await fetch(`${API_BASE}/user-timeline?user=${userId}&range=${range}&timezone=${encodeURIComponent(timezone)}`);
       return await response.json();
     } catch (e) {
       console.error(e);
