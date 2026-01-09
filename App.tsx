@@ -8,6 +8,7 @@ import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import { ExportProvider } from './contexts/ExportContext';
+import { TimezoneProvider } from './contexts/TimezoneContext';
 
 enum Page {
   EXECUTIVE = 'executive',
@@ -17,10 +18,27 @@ enum Page {
   PROFILE = 'profile'
 }
 
+const PAGE_STORAGE_KEY = 'dashboard_current_page';
+
+// Valid pages for localStorage validation
+const validPages = Object.values(Page) as string[];
+
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>(Page.EXECUTIVE);
+  // Load saved page from localStorage, default to Executive
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    const saved = localStorage.getItem(PAGE_STORAGE_KEY);
+    if (saved && validPages.includes(saved)) {
+      return saved as Page;
+    }
+    return Page.EXECUTIVE;
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
+
+  // Persist page changes to localStorage
+  useEffect(() => {
+    localStorage.setItem(PAGE_STORAGE_KEY, currentPage);
+  }, [currentPage]);
 
   // Session token expiry duration
   const SESSION_DURATION = 24 * 60 * 60 * 1000;
@@ -99,16 +117,18 @@ const App: React.FC = () => {
   };
 
   return (
-    <ExportProvider>
-      <Layout 
-        currentPath={currentPage} 
-        onNavigate={(p: any) => setCurrentPage(p)}
-        onLogout={handleLogout}
-        userName={user?.name || 'Authorized User'}
-      >
-        {renderPage()}
-      </Layout>
-    </ExportProvider>
+    <TimezoneProvider>
+      <ExportProvider>
+        <Layout 
+          currentPath={currentPage} 
+          onNavigate={(p: any) => setCurrentPage(p)}
+          onLogout={handleLogout}
+          userName={user?.name || 'Authorized User'}
+        >
+          {renderPage()}
+        </Layout>
+      </ExportProvider>
+    </TimezoneProvider>
   );
 };
 
