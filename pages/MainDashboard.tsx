@@ -252,7 +252,7 @@ const MainDashboard: React.FC = () => {
     setLoading(true);
     try {
         const [dashboardData, breakdownData, summaryStats] = await Promise.all([
-            db.getDashboardData(timeRange.toLowerCase(), undefined, filterUserId || undefined),
+            db.getDashboardData(timeRange.toLowerCase(), undefined, filterUserId || undefined, timezone),
             db.getUserActivityBreakdown(timeRange.toLowerCase(), undefined, filterUserId || undefined),
             db.getSummaryKPIs(timeRange.toLowerCase(), undefined, filterUserId || undefined)
         ]);
@@ -268,7 +268,7 @@ const MainDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [timeRange, filterUserId]);
+  }, [timeRange, filterUserId, timezone]);
 
   // Fetch timeline data when a user is selected or timezone changes
   useEffect(() => {
