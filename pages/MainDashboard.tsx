@@ -445,6 +445,7 @@ const MainDashboard: React.FC = () => {
                       setUserSearchOpen(true);
                     }}
                     onFocus={() => setUserSearchOpen(true)}
+                    onBlur={() => setTimeout(() => setUserSearchOpen(false), 200)}
                     className={`w-full py-2 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm ${filterUserId ? 'text-blue-600 font-medium' : ''}`}
                   />
                   {filterUserId && (
@@ -461,7 +462,7 @@ const MainDashboard: React.FC = () => {
                   )}
                 </div>
                 
-                {userSearchOpen && userSearchQuery.length > 0 && (
+                {userSearchOpen && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
                     <div className="max-h-60 overflow-y-auto">
                       <button 
@@ -477,7 +478,8 @@ const MainDashboard: React.FC = () => {
                         All Users
                       </button>
                       {allUsers
-                        .filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || 
+                        .filter(u => userSearchQuery.length === 0 || 
+                                     u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || 
                                      u.name.toLowerCase().includes(userSearchQuery.toLowerCase()))
                         .map((u) => (
                           <button 
@@ -495,7 +497,7 @@ const MainDashboard: React.FC = () => {
                           </button>
                         ))
                       }
-                      {allUsers.filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || u.name.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
+                      {userSearchQuery.length > 0 && allUsers.filter(u => u.name.toLowerCase().startsWith(userSearchQuery.toLowerCase()) || u.name.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
                         <div className="px-4 py-3 text-sm text-slate-400 text-center">No users found</div>
                       )}
                     </div>
