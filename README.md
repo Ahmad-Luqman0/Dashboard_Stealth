@@ -52,7 +52,7 @@ This project is configured for seamless deployment on Vercel.
 3. **Environment Variables**: Add the `DB_*` variables from your local `.env` to Vercel's settings.
 4. **Deploy**: Vercel automatically detects Vite and the `vercel.json` configuration handles the API routes.
 
-## 📂 Project Structure
+##  Project Structure
 - **/api**: Express backend and database queries.
 - **/src**: React frontend source (implied root structure).
 - **vercel.json**: Routing configuration for serverless deployment.
