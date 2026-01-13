@@ -819,11 +819,27 @@ const MainDashboard: React.FC = () => {
                             <div>
                               <p className="text-xs font-bold text-slate-600 mb-2">All Periods</p>
                               <div className="space-y-2">
-                                {/* Show each individual active period from all sessions */}
+                                {/* Show each individual active period from all sessions - sorted by start time ascending */}
                                 {day.sessions.flatMap((session: any, sIdx: number) => 
                                   (session.activePeriods || [{ startTime: session.startTime, endTime: session.endTime, duration: session.activeTime }])
-                                    .map((period: any, pIdx: number) => (
-                                      <div key={`${sIdx}-${pIdx}`} className="flex items-center justify-between py-1">
+                                    .map((period: any, pIdx: number) => ({ ...period, sIdx, pIdx }))
+                                )
+                                .sort((a: any, b: any) => {
+                                  // Parse time strings to compare (e.g., "1:26 PM")
+                                  const parseTime = (timeStr: string) => {
+                                    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                    if (!match) return 0;
+                                    let hour = parseInt(match[1]);
+                                    const min = parseInt(match[2]);
+                                    const ampm = match[3].toUpperCase();
+                                    if (ampm === 'PM' && hour !== 12) hour += 12;
+                                    if (ampm === 'AM' && hour === 12) hour = 0;
+                                    return hour * 60 + min;
+                                  };
+                                  return parseTime(a.startTime) - parseTime(b.startTime);
+                                })
+                                .map((period: any) => (
+                                      <div key={`${period.sIdx}-${period.pIdx}`} className="flex items-center justify-between py-1">
                                         <span className="text-xs text-green-600 flex items-center gap-1">
                                           <span className="w-2 h-2 bg-green-500 rounded-full"></span> Active
                                         </span>
@@ -831,7 +847,7 @@ const MainDashboard: React.FC = () => {
                                         <span className="text-xs font-bold text-slate-600">{formatDuration(period.duration)}</span>
                                       </div>
                                     ))
-                                )}
+                                }
                               </div>
                             </div>
                           </td>
