@@ -1,0 +1,22 @@
+{
+  "name": "immense_code_stealth-dash",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "server": "nodemon api/index.js",
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.34.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "nodemon": "^3.1.11",
+    "typescript": "~5.8.2"
+  }
+}
