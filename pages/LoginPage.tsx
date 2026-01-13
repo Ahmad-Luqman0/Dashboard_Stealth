@@ -110,11 +110,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </div>
       </div>
-
-      {/* Powered By Footer */}
-      <div className="fixed bottom-2 left-2 text-[10px] text-slate-400 font-medium">
-        Powered by <span className="font-bold text-blue-500">Immense Code</span> V1.0
-      </div>
     </div>
   );
 };
