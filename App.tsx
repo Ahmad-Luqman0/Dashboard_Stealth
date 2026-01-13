@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+//Vercel Analytics
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import SummaryDashboard from './pages/SummaryDashboard';
@@ -128,6 +130,7 @@ const App: React.FC = () => {
           {renderPage()}
         </Layout>
       </ExportProvider>
+      <Analytics />
     </TimezoneProvider>
   );
 };
