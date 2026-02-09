@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, BarChart3, PieChart, LogOut, ChevronLeft, ChevronRight, UserCircle, Globe } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, PieChart, LogOut, ChevronLeft, ChevronRight, UserCircle, Globe, Server, UserCog, Moon, Sun } from 'lucide-react';
 import { useExport } from '../contexts/ExportContext';
 import { useTimezone, TIMEZONE_OPTIONS } from '../contexts/TimezoneContext';
 
@@ -12,11 +12,13 @@ interface LayoutProps {
   onNavigate: (path: string) => void;
   onLogout: () => void;
   userName: string;
+  userType?: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLogout, userName }) => {
+const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLogout, userName, userType }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [user, setUser] = React.useState<any>(null);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const { triggerExport } = useExport();
   const { timezone, setTimezone } = useTimezone();
   
@@ -28,7 +30,25 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
             setUser(u);
         }
     } catch (e) { console.error("Failed to load user", e); }
+    
+    // Load dark mode preference
+    const darkMode = localStorage.getItem('darkMode') === 'true';
+    setIsDarkMode(darkMode);
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    }
   }, []);
+  
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const menuItems = [
     { id: 'executive', label: 'Executive Dashboard', icon: BarChart3 },
@@ -37,6 +57,14 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
     { id: 'users', label: 'Users', icon: Users },
   ];
 
+  // Add Device Mappings menu item only for admin users
+  const adminMenuItems = userType === 'admin' ? [
+    { id: 'device-mappings', label: 'Device Mappings', icon: Server },
+    { id: 'unregistered-sessions', label: 'Unregistered Sessions', icon: UserCog }
+  ] : [];
+
+  const allMenuItems = [...menuItems, ...adminMenuItems];
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       {/* Sidebar */}
@@ -44,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
             <div className="flex items-center justify-center">
-                <img src="/logo2.png" alt="Intelly" className="h-20 w-auto object-contain" />
+                <img src="/Logo_overwatch.png" alt="Overwatch" className="h-20 w-auto object-contain" />
               </div>
           )}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
@@ -53,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         </div>
 
         <nav className="flex-1 px-4 mt-4">
-          {menuItems.map((item) => (
+          {allMenuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
@@ -95,7 +123,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-20">
           <div className="text-sm font-semibold text-slate-500">
-            {menuItems.find(item => item.id === currentPath)?.label || 'Dashboard'}
+            {allMenuItems.find(item => item.id === currentPath)?.label || 'Dashboard'}
           </div>
           <div className="flex items-center gap-4">
             {/* Timezone Dropdown */}
@@ -113,6 +141,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
                 ))}
               </select>
             </div>
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center gap-2 text-slate-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-100 transition-all border border-slate-200"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+              {isDarkMode ? 'Light' : 'Dark'}
+            </button>
             <button 
               onClick={onLogout}
               className="flex items-center gap-2 text-red-500 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition-all border border-transparent hover:border-red-100"

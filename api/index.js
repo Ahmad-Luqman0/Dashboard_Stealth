@@ -78,6 +78,22 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// Get all user types
+app.get('/api/usertypes', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT id, name
+      FROM usertypes
+      WHERE active = true
+      ORDER BY name ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch user types' });
+  }
+});
+
 // Get Available Shifts
 app.get('/api/shifts', async (req, res) => {
     try {
@@ -486,6 +502,283 @@ app.delete('/api/dashboard-users/:id', async (req, res) => {
             res.json({ success: true });
         } else {
             res.status(404).json({ error: 'User not found' });
+        }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Deletion failed' });
+    }
+});
+
+// Device Mappings Management (Admin Only)
+// Get all device mappings with user details
+app.get('/api/device-mappings', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                udm.id,
+                udm.user_id,
+                udm.device_id,
+                udm.ip_address,
+                udm.created_at,
+                u.name as user_name,
+                u.email as user_email
+            FROM user_device_mappings udm
+            JOIN users u ON udm.user_id = u.id
+            ORDER BY udm.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch device mappings' });
+    }
+});
+
+// Create new device mapping
+app.post('/api/device-mappings', async (req, res) => {
+    const { user_id, device_id, ip_address } = req.body;
+    
+    if (!user_id || !device_id) {
+        return res.status(400).json({ error: 'user_id and device_id are required' });
+    }
+    
+    try {
+        const result = await query(
+            `INSERT INTO user_device_mappings (user_id, device_id, ip_address) 
+             VALUES ($1, $2, $3) 
+             RETURNING *`,
+            [user_id, device_id, ip_address || null]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') { // Unique violation
+            res.status(400).json({ error: 'This device is already mapped to this user' });
+        } else if (err.code === '23503') { // Foreign key violation
+            res.status(400).json({ error: 'Invalid user_id' });
+        } else {
+            res.status(500).json({ error: 'Failed to create device mapping' });
+        }
+    }
+});
+
+// Delete device mapping
+app.delete('/api/device-mappings/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await query('DELETE FROM user_device_mappings WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length > 0) {
+            res.json({ success: true });
+        } else {
+            res.status(404).json({ error: 'Device mapping not found' });
+        }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Deletion failed' });
+    }
+});
+
+// Unregistered Sessions Management (Admin Only)
+// Get stealth sessions where user_in_db = false and not mapped to any device
+app.get('/api/unregistered-sessions', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                ss.id,
+                ss.session_id,
+                ss.device_id,
+                ss.system_name,
+                ss.windows_username,
+                ss.ip_address,
+                ss.os_version,
+                ss.domain,
+                ss.created_at,
+                ss.total_time,
+                ss.productive_time,
+                ss.wasted_time,
+                ss.neutral_time,
+                ss.idle_time
+            FROM stealth_sessions ss
+            WHERE ss.user_in_db = false
+            ORDER BY ss.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch unregistered sessions' });
+    }
+});
+
+// Register a new user and link to session
+app.post('/api/register-user-from-session', async (req, res) => {
+    const { name, email, phone, usertype_id, session_id, device_id, windows_username } = req.body;
+    
+    if (!name || !email || !usertype_id || !session_id) {
+        return res.status(400).json({ error: 'name, email, usertype_id, and session_id are required' });
+    }
+    
+    try {
+        // Start transaction
+        await query('BEGIN');
+        
+        // Insert user with a default password
+        const userResult = await query(
+            `INSERT INTO users (name, email, phone, password, usertype_id, status) 
+             VALUES ($1, $2, $3, $4, $5, 'active') 
+             RETURNING *`,
+            [name, email, phone || null, 'changeme123', usertype_id]
+        );
+        
+        const newUser = userResult.rows[0];
+        
+        // Update stealth sessions to link to new user
+        await query(
+            `UPDATE stealth_sessions 
+             SET user_id = $1, user_in_db = true 
+             WHERE session_id = $2`,
+            [newUser.id, session_id]
+        );
+        
+        // Create device mapping if device_id exists
+        if (device_id) {
+            await query(
+                `INSERT INTO user_device_mappings (user_id, device_id, ip_address)
+                 VALUES ($1, $2, (SELECT ip_address FROM stealth_sessions WHERE session_id = $3 LIMIT 1))
+                 ON CONFLICT (user_id, device_id) DO NOTHING`,
+                [newUser.id, device_id, session_id]
+            );
+        }
+        
+        // Create Windows username mapping if provided
+        if (windows_username) {
+            await query(
+                `INSERT INTO windows_username_mappings (user_id, windows_username)
+                 VALUES ($1, $2)
+                 ON CONFLICT (windows_username) DO NOTHING`,
+                [newUser.id, windows_username]
+            );
+        }
+        
+        await query('COMMIT');
+        res.json({ success: true, user: newUser });
+    } catch (err) {
+        await query('ROLLBACK');
+        console.error(err);
+        if (err.code === '23505') { // Unique violation
+            res.status(400).json({ error: 'Email already exists' });
+        } else {
+            res.status(500).json({ error: 'Failed to register user' });
+        }
+    }
+});
+
+// Map existing user to session
+app.post('/api/map-user-to-session', async (req, res) => {
+    const { user_id, session_id, device_id, windows_username } = req.body;
+    
+    if (!user_id || !session_id) {
+        return res.status(400).json({ error: 'user_id and session_id are required' });
+    }
+    
+    try {
+        await query('BEGIN');
+        
+        // Update stealth sessions to link to user
+        await query(
+            `UPDATE stealth_sessions 
+             SET user_id = $1, user_in_db = true 
+             WHERE session_id = $2`,
+            [user_id, session_id]
+        );
+        
+        // Create device mapping if device_id exists
+        if (device_id) {
+            await query(
+                `INSERT INTO user_device_mappings (user_id, device_id, ip_address)
+                 VALUES ($1, $2, (SELECT ip_address FROM stealth_sessions WHERE session_id = $3 LIMIT 1))
+                 ON CONFLICT (user_id, device_id) DO NOTHING`,
+                [user_id, device_id, session_id]
+            );
+        }
+        
+        // Create Windows username mapping if provided
+        if (windows_username) {
+            await query(
+                `INSERT INTO windows_username_mappings (user_id, windows_username)
+                 VALUES ($1, $2)
+                 ON CONFLICT (windows_username) DO NOTHING`,
+                [user_id, windows_username]
+            );
+        }
+        
+        await query('COMMIT');
+        res.json({ success: true });
+    } catch (err) {
+        await query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Failed to map user to session' });
+    }
+});
+
+// Windows Username Mappings Management
+// Get all Windows username mappings
+app.get('/api/windows-username-mappings', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                wum.id,
+                wum.user_id,
+                wum.windows_username,
+                wum.created_at,
+                u.name as user_name,
+                u.email as user_email
+            FROM windows_username_mappings wum
+            JOIN users u ON wum.user_id = u.id
+            ORDER BY wum.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch Windows username mappings' });
+    }
+});
+
+// Create Windows username mapping
+app.post('/api/windows-username-mappings', async (req, res) => {
+    const { user_id, windows_username } = req.body;
+    
+    if (!user_id || !windows_username) {
+        return res.status(400).json({ error: 'user_id and windows_username are required' });
+    }
+    
+    try {
+        const result = await query(
+            `INSERT INTO windows_username_mappings (user_id, windows_username) 
+             VALUES ($1, $2) 
+             RETURNING *`,
+            [user_id, windows_username]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') { // Unique violation
+            res.status(400).json({ error: 'This Windows username is already mapped' });
+        } else if (err.code === '23503') { // Foreign key violation
+            res.status(400).json({ error: 'Invalid user_id' });
+        } else {
+            res.status(500).json({ error: 'Failed to create Windows username mapping' });
+        }
+    }
+});
+
+// Delete Windows username mapping
+app.delete('/api/windows-username-mappings/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await query('DELETE FROM windows_username_mappings WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length > 0) {
+            res.json({ success: true });
+        } else {
+            res.status(404).json({ error: 'Windows username mapping not found' });
         }
     } catch (e) {
         console.error(e);

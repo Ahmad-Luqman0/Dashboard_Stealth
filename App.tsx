@@ -8,6 +8,8 @@ import SummaryDashboard from './pages/SummaryDashboard';
 import MainDashboard from './pages/MainDashboard';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
+import DeviceMappingsPage from './pages/DeviceMappingsPage';
+import UnregisteredSessionsPage from './pages/UnregisteredSessionsPage';
 import LoginPage from './pages/LoginPage';
 import { ExportProvider } from './contexts/ExportContext';
 import { TimezoneProvider } from './contexts/TimezoneContext';
@@ -17,6 +19,8 @@ enum Page {
   SUMMARY = 'summary',
   DASHBOARD = 'dashboard',
   USERS = 'users',
+  DEVICE_MAPPINGS = 'device-mappings',
+  UNREGISTERED_SESSIONS = 'unregistered-sessions',
   PROFILE = 'profile'
 }
 
@@ -95,12 +99,19 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     setUser(userData);
     localStorage.setItem('er_session', JSON.stringify(sessionData));
+    
+    // Always reset to Executive Dashboard on login
+    setCurrentPage(Page.EXECUTIVE);
+    localStorage.setItem(PAGE_STORAGE_KEY, Page.EXECUTIVE);
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem('er_session');
+    
+    // Clear saved page preference on logout
+    localStorage.removeItem(PAGE_STORAGE_KEY);
   };
 
   if (!isAuthenticated) {
@@ -113,6 +124,12 @@ const App: React.FC = () => {
       case Page.SUMMARY: return <SummaryDashboard />;
       case Page.DASHBOARD: return <MainDashboard />;
       case Page.USERS: return <UsersPage />;
+      case Page.DEVICE_MAPPINGS: 
+        // Only allow admin users to view device mappings
+        return user?.type === 'admin' ? <DeviceMappingsPage /> : <ExecutiveDashboard />;
+      case Page.UNREGISTERED_SESSIONS:
+        // Only allow admin users to view unregistered sessions
+        return user?.type === 'admin' ? <UnregisteredSessionsPage /> : <ExecutiveDashboard />;
       case Page.PROFILE: return <ProfilePage />;
       default: return <MainDashboard />;
     }
@@ -126,6 +143,7 @@ const App: React.FC = () => {
           onNavigate={(p: any) => setCurrentPage(p)}
           onLogout={handleLogout}
           userName={user?.name || 'Authorized User'}
+          userType={user?.type}
         >
           {renderPage()}
         </Layout>

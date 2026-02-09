@@ -1,15 +1,16 @@
--- Complete Database Schema - All Tables
--- Drop tables in correct order to avoid FK issues
-
--- Drop schema1.sql tables first
+-- Drop stealth tables first
 DROP TABLE IF EXISTS session_visits CASCADE;
 DROP TABLE IF EXISTS session_usage_breakdown CASCADE;
-DROP TABLE IF EXISTS user_sessions CASCADE;
-DROP TABLE IF EXISTS user_bindings CASCADE;
+DROP TABLE IF EXISTS stealth_sessions CASCADE;
+DROP TABLE IF EXISTS stealth_bindings CASCADE;
 DROP TABLE IF EXISTS user_shifts CASCADE;
+DROP TABLE IF EXISTS app_config CASCADE;
+DROP TABLE IF EXISTS whitelisted_urls CASCADE;
+DROP TABLE IF EXISTS allowed_queues CASCADE;
+DROP TABLE IF EXISTS dashboard_users CASCADE;
 
--- Drop schema.sql tables
-DROP TABLE IF EXISTS useractivities CASCADE;
+-- Drop base tables (from user's old scheme)
+DROP TABLE IF EXISTS useractivities CASCADE; 
 DROP TABLE IF EXISTS inactivity CASCADE;
 DROP TABLE IF EXISTS video_keys CASCADE;
 DROP TABLE IF EXISTS video_speeds CASCADE;
@@ -19,28 +20,9 @@ DROP TABLE IF EXISTS queues CASCADE;
 DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS usertypes CASCADE;
-DROP TABLE IF EXISTS dashboard_users CASCADE;
 
 -- ============================================
--- MEN FOR DASHBOARD ACCESS
--- ============================================
-
--- Dashboard Viewers Table
-CREATE TABLE IF NOT EXISTS dashboard_users (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    phone VARCHAR(255), -- Optional
-    status VARCHAR(50) NOT NULL DEFAULT 'active',
-    type VARCHAR(50) NOT NULL CHECK (type IN ('admin', 'manager', 'supervisor', 'employee')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ============================================
--- CORE TABLES (from schema.sql)
+-- BASE TABLES (User's Old Scheme)
 -- ============================================
 
 -- User types table
@@ -68,14 +50,46 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMPTZ
 );
 
--- Sessions table
+-- Dashboard specific users (Admin/Management)
+CREATE TABLE IF NOT EXISTS dashboard_users (
+  id serial not null,
+  name character varying(255) not null,
+  username character varying(255) not null,
+  email character varying(255) not null,
+  password character varying(255) not null,
+  phone character varying(255) null,
+  status character varying(50) not null default 'active'::character varying,
+  type character varying(50) not null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint dashboard_users_pkey primary key (id),
+  constraint dashboard_users_email_key unique (email),
+  constraint dashboard_users_username_key unique (username),
+  constraint dashboard_users_type_check check (
+    (
+      (type)::text = any (
+        (
+          array[
+            'admin'::character varying,
+            'manager'::character varying,
+            'supervisor'::character varying,
+            'employee'::character varying
+          ]
+        )::text[]
+      )
+    )
+  )
+);
+
+-- Sessions table (Base sessions, distinct from stealth stealth_sessions)
 CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     starttime TIMESTAMPTZ NOT NULL,
     endtime TIMESTAMPTZ,
     duration NUMERIC,
     total_videos_watched INTEGER DEFAULT 0,
+    ip_address VARCHAR(45),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -139,15 +153,21 @@ CREATE TABLE IF NOT EXISTS queues (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     session_id VARCHAR NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    main_queue TEXT,
+    main_queue_count INTEGER DEFAULT 0,
+    subqueues JSONB DEFAULT '[]'::jsonb,
+    subqueue_counts JSONB DEFAULT '{}'::jsonb,
     selected_subqueue TEXT,
     queue_count_old INTEGER DEFAULT 0,
     queue_count_new INTEGER DEFAULT 0,
     subqueue_count_old INTEGER DEFAULT 0,
     subqueue_count_new INTEGER DEFAULT 0,
+    queue_id VARCHAR(50),
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT queues_session_id_name_key UNIQUE (session_id, name)
 );
 
 -- Session cards
@@ -164,10 +184,19 @@ CREATE TABLE IF NOT EXISTS cards (
 );
 
 -- ============================================
--- USER SHIFT & SESSION TRACKING TABLES (from schema1.sql)
+-- STEALTH MODULE TABLES
 -- ============================================
 
--- User shifts table (extends users table)
+-- App Configuration (Productive, Wasted, Neutral Apps/URLs)
+CREATE TABLE IF NOT EXISTS app_config (
+    id SERIAL PRIMARY KEY,
+    config_type VARCHAR(255) NOT NULL UNIQUE, -- e.g., 'productivity_apps'
+    data JSONB NOT NULL, -- Stores { "PRODUCTIVE_APPS": [...], ... }
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- User shifts table (extends users table for shift logic)
 CREATE TABLE IF NOT EXISTS user_shifts (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -180,23 +209,40 @@ CREATE TABLE IF NOT EXISTS user_shifts (
     UNIQUE (user_id)
 );
 
--- User bindings table (stores device binding information for users)
-CREATE TABLE IF NOT EXISTS user_bindings (
+-- Stealth bindings table (stores device binding and uninstall token)
+CREATE TABLE IF NOT EXISTS stealth_bindings (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    bound_at TIMESTAMPTZ,
-    bound_device_id VARCHAR(255),
-    bound_hostname VARCHAR(255),
-    uninstall_token VARCHAR(255),
+    device_id VARCHAR(255) NOT NULL UNIQUE,
+    pc_name VARCHAR(255) NOT NULL,
+    uninstall_token VARCHAR(255) NOT NULL,
+    bound_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- User sessions table (stores session data linked directly to user)
-CREATE TABLE IF NOT EXISTS user_sessions (
+-- User-Device mappings table (tracks which devices are mapped to which users)
+CREATE TABLE IF NOT EXISTS user_device_mappings (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_id VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(50),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, device_id)
+);
+
+-- Windows Username Mappings (maps Windows usernames to registered users)
+CREATE TABLE IF NOT EXISTS windows_username_mappings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    windows_username VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- User sessions table (stores stealth session data)
+CREATE TABLE IF NOT EXISTS stealth_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     session_id VARCHAR(255) NOT NULL,
     date DATE NOT NULL,
     start_time TIMESTAMPTZ NOT NULL,
@@ -205,12 +251,19 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     neutral_time NUMERIC DEFAULT 0,
     wasted_time NUMERIC DEFAULT 0,
     idle_time NUMERIC DEFAULT 0,
+    break_time NUMERIC DEFAULT 0,
     total_time NUMERIC DEFAULT 0,
     device_id VARCHAR(255),
     last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     shift_status_start VARCHAR(50),
     shift_status_current VARCHAR(50),
     session_shift VARCHAR(50),
+    system_name VARCHAR(255),
+    os_version VARCHAR(255),
+    domain VARCHAR(255),
+    ip_address VARCHAR(50),
+    user_in_db BOOLEAN DEFAULT false,
+    windows_username VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, session_id)
 );
@@ -218,7 +271,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 -- Session usage breakdown table (stores categorized usage by domain/app)
 CREATE TABLE IF NOT EXISTS session_usage_breakdown (
     id SERIAL PRIMARY KEY,
-    user_session_id INTEGER NOT NULL REFERENCES user_sessions(id) ON DELETE CASCADE,
+    user_session_id INTEGER NOT NULL REFERENCES stealth_sessions(id) ON DELETE CASCADE,
     category VARCHAR(50) NOT NULL CHECK (category IN ('productive', 'neutral', 'wasted', 'idle')),
     domain_or_app VARCHAR(255) NOT NULL,
     total_time NUMERIC NOT NULL DEFAULT 0,
@@ -236,29 +289,57 @@ CREATE TABLE IF NOT EXISTS session_visits (
 );
 
 -- ============================================
+-- BROWSER EXTENSION & WHITELISTING
+-- ============================================
+
+-- Whitelisted URLs table
+CREATE TABLE IF NOT EXISTS whitelisted_urls (
+    id SERIAL PRIMARY KEY,
+    url VARCHAR(500) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Allowed Queues table
+CREATE TABLE IF NOT EXISTS allowed_queues (
+    id SERIAL PRIMARY KEY,
+    queue_id VARCHAR(50),
+    queue_name VARCHAR(500) NOT NULL,
+    business_type VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 
--- Indexes from schema.sql
+-- Indexes from base tables
 CREATE INDEX IF NOT EXISTS idx_cards_queue_id ON cards (queue_id);
 CREATE INDEX IF NOT EXISTS idx_cards_session_id ON cards (session_id);
 CREATE INDEX IF NOT EXISTS idx_queues_session_id ON queues (session_id);
 
--- Indexes from schema1.sql
+-- Indexes for stealth tables
 CREATE INDEX IF NOT EXISTS idx_user_shifts_user_id ON user_shifts (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_bindings_user_id ON user_bindings (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_bindings_device_id ON user_bindings (bound_device_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_date ON user_sessions (date);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id ON user_sessions (session_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_device_id ON user_sessions (device_id);
+CREATE INDEX IF NOT EXISTS idx_stealth_bindings_device_id ON stealth_bindings (device_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_mappings_user_id ON user_device_mappings (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_mappings_device_id ON user_device_mappings (device_id);
+CREATE INDEX IF NOT EXISTS idx_windows_username_mappings_windows_username ON windows_username_mappings (windows_username);
+CREATE INDEX IF NOT EXISTS idx_windows_username_mappings_user_id ON windows_username_mappings (user_id);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_user_id ON stealth_sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_date ON stealth_sessions (date);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_session_id ON stealth_sessions (session_id);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_device_id ON stealth_sessions (device_id);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_windows_username ON stealth_sessions (windows_username);
+CREATE INDEX IF NOT EXISTS idx_stealth_sessions_system_name ON stealth_sessions (system_name);
 CREATE INDEX IF NOT EXISTS idx_session_usage_breakdown_user_session_id ON session_usage_breakdown (user_session_id);
 CREATE INDEX IF NOT EXISTS idx_session_usage_breakdown_category ON session_usage_breakdown (category);
 CREATE INDEX IF NOT EXISTS idx_session_visits_usage_breakdown_id ON session_visits (usage_breakdown_id);
+CREATE INDEX IF NOT EXISTS idx_allowed_queues_queue_name ON allowed_queues (queue_name);
+CREATE INDEX IF NOT EXISTS idx_allowed_queues_queue_id ON allowed_queues (queue_id);
 
 -- ============================================
 -- DEFAULT DATA
--- ============================================
+-- ============================================ 
 
 -- Insert default user types
 INSERT INTO usertypes (name, active) VALUES

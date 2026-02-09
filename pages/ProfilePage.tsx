@@ -14,9 +14,11 @@ const ProfilePage: React.FC = () => {
     useEffect(() => {
         const stored = localStorage.getItem('er_session');
         if (stored) {
-            const u = JSON.parse(stored);
-            setUser(u);
-            setFormData(prev => ({ ...prev, phone: u.phone || '' }));
+            const sessionData = JSON.parse(stored);
+            // Handle both direct user object and nested structure
+            const userData = sessionData.user || sessionData;
+            setUser(userData);
+            setFormData(prev => ({ ...prev, phone: userData.phone || '' }));
         }
     }, []);
 
@@ -52,10 +54,16 @@ const ProfilePage: React.FC = () => {
             setMsg({ text: res.error, type: 'error' });
         } else {
             setMsg({ text: 'Profile updated successfully!', type: 'success' });
-            // Update local storage
-            const updatedUser = { ...user, ...res.user };
-            localStorage.setItem('er_session', JSON.stringify(updatedUser));
-            setUser(updatedUser);
+            // Update local storage with proper structure
+            const stored = localStorage.getItem('er_session');
+            if (stored) {
+                const sessionData = JSON.parse(stored);
+                const updatedUser = { ...user, ...res.user };
+                // Maintain the session structure (with expiry time if exists)
+                sessionData.user = updatedUser;
+                localStorage.setItem('er_session', JSON.stringify(sessionData));
+                setUser(updatedUser);
+            }
             setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
         }
     };

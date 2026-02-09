@@ -37,8 +37,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       <div className="w-full max-w-md p-8 bg-white rounded-3xl shadow-2xl border border-slate-100 relative z-10 mx-4">
         <div className="flex flex-col items-center mb-10 text-center">
-          <img src="/logo2.png" alt="Logo" className="w-48 h-auto mb-6 hover:scale-105 transition-transform cursor-pointer" />
-          <span className="text-5xl font-bold text-blue-600 tracking-tight mb-8">Intelly Digital Solutions</span>
+          <img src="/Logo_overwatch.png" alt="Overwatch" className="w-48 h-auto mb-6 hover:scale-105 transition-transform cursor-pointer" />
+          <span className="text-5xl font-bold text-blue-600 tracking-tight mb-8">OVERWATCH PLATFORM</span>
           <h1 className="text-xl font-bold text-slate-600 tracking-tight">Welcome Back</h1>
           <p className="text-slate-500 mt-2 text-sm">Enter your credentials to access the dashboard</p>
         </div>

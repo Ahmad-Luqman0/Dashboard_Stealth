@@ -1,0 +1,336 @@
+/* Beautiful Modern Dark Mode */
+
+.dark {
+  color-scheme: dark;
+}
+
+/* ===== BACKGROUNDS ===== */
+/* Body - Deep space blue with subtle gradient */
+.dark,
+.dark body {
+  background: linear-gradient(to bottom, #0a0f1e 0%, #111827 100%) !important;
+  color: #e5e7eb !important;
+}
+
+/* Main content - Smooth dark surface */
+.dark main {
+  background: transparent !important;
+}
+
+/* Cards & Surfaces - Elevated dark surfaces with subtle glow */
+.dark div[class*="bg-white"],
+.dark [style*="background-color: white"],
+.dark [style*="backgroundColor: 'white'"],
+.dark aside {
+  background: linear-gradient(135deg, #1a1f2e 0%, #1f2937 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Header - Premium glass effect */
+.dark header {
+  background: rgba(17, 24, 39, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Secondary backgrounds */
+.dark [class*="bg-slate-50"],
+.dark [style*="bg-slate-50"],
+.dark thead,
+.dark [style*="backgroundColor: '#f9fafb'"] {
+  background: linear-gradient(to right, #1f2937 0%, #252d3f 100%) !important;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15) !important;
+}
+
+.dark [class*="bg-slate-100"],
+.dark [style*="bg-slate-100"] {
+  background: #2d3548 !important;
+}
+
+/* ===== BORDERS ===== */
+.dark [class*="border-slate-"],
+.dark [style*="border"],
+.dark table,
+.dark thead,
+.dark tbody tr {
+  border-color: rgba(75, 85, 99, 0.3) !important;
+}
+
+/* Sidebar border with glow */
+.dark aside {
+  border-right: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 2px 0 20px rgba(99, 102, 241, 0.05) !important;
+}
+
+/* ===== TEXT COLORS ===== */
+/* Primary text - Clean white with slight warmth */
+.dark,
+.dark [class*="text-slate-800"],
+.dark [class*="text-slate-700"],
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
+.dark td, .dark th, .dark p, 
+.dark span:not([class*="text-blue"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-cyan"]) {
+  color: #f3f4f6 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Secondary text - Muted but readable */
+.dark [class*="text-slate-600"],
+.dark [class*="text-slate-500"] {
+  color: #9ca3af !important;
+}
+
+/* Tertiary text */
+.dark [class*="text-slate-400"],
+.dark [class*="text-slate-300"] {
+  color: #6b7280 !important;
+}
+
+/* ===== TABLES ===== */
+.dark table {
+  background-color: transparent !important;
+}
+
+/* Table rows with hover effect */
+.dark tbody tr {
+  transition: all 0.2s ease;
+}
+
+.dark tbody tr:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  transform: scale(1.002);
+}
+
+.dark tbody td {
+  color: #e5e7eb !important;
+}
+
+.dark tbody td[style*="color: '#6b7280'"],
+.dark tbody td[style*="color: '#9ca3af'"] {
+  color: #9ca3af !important;
+}
+
+/* Table headers with gradient */
+.dark th {
+  color: #a5b4fc !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px !important;
+}
+
+/* ===== FORMS ===== */
+.dark input,
+.dark select,
+.dark textarea {
+  background: linear-gradient(to bottom, #1f2937 0%, #1a2332 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  color: #f3f4f6 !important;
+  transition: all 0.3s ease;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 0 20px rgba(99, 102, 241, 0.2) !important;
+  background: #1a2332 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+.dark input:disabled,
+.dark select:disabled {
+  background: #0f1419 !important;
+  color: #4b5563 !important;
+  opacity: 0.6;
+}
+
+/* ===== BUTTONS ===== */
+/* Default buttons with premium feel */
+.dark button:not([class*="bg-blue"]):not([class*="bg-red"]):not([class*="bg-green"]):not([style*="backgroundColor: '#3b82f6'"]):not([style*="backgroundColor: '#ef4444'"]) {
+  background: linear-gradient(135deg, #2d3548 0%, #1f2937 100%) !important;
+  color: #d1d5db !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark button:not([class*="bg-blue"]):not([class*="bg-red"]):not([class*="bg-green"]):hover {
+  background: linear-gradient(135deg, #374151 0%, #2d3548 100%) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* Blue buttons - Vibrant and glowing */
+.dark [class*="bg-blue-600"],
+.dark [style*="backgroundColor: '#3b82f6'"] {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2) !important;
+  border: none !important;
+}
+
+.dark [class*="bg-blue-600"]:hover,
+.dark [style*="backgroundColor: '#3b82f6'"]:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5), 0 0 30px rgba(99, 102, 241, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+/* Red buttons - Danger with sophistication */
+.dark [style*="backgroundColor: '#ef4444'"],
+.dark [class*="bg-red-"] {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3) !important;
+}
+
+.dark [style*="backgroundColor: '#ef4444'"]:hover {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Green buttons - Success with glow */
+.dark [class*="bg-green-"],
+.dark [style*="backgroundColor: '#10b981'"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* ===== ACCENT COLORS ===== */
+.dark [class*="text-blue-600"],
+.dark [class*="text-blue-500"] {
+  color: #818cf8 !important;
+  text-shadow: 0 0 10px rgba(129, 140, 248, 0.3);
+}
+
+/* Blue backgrounds (badges, pills) */
+.dark [class*="bg-blue-50"],
+.dark [class*="bg-blue-100"] {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.1) 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+}
+
+/* ===== SIDEBAR ACTIVE STATE ===== */
+.dark .bg-blue-600 {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ===== SHADOWS & DEPTH ===== */
+.dark [class*="shadow-lg"] {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.1) !important;
+}
+
+.dark [class*="shadow-xl"] {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.15) !important;
+}
+
+.dark [class*="shadow"] {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ===== ALERTS ===== */
+.dark [style*="backgroundColor: '#fee2e2'"],
+.dark [class*="bg-red-50"] {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.dark [style*="backgroundColor: '#d1fae5'"],
+.dark [class*="bg-green-50"] {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.dark [class*="bg-yellow-50"] {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+/* ===== MODALS ===== */
+.dark [style*="rgba(0,0,0,0.5)"],
+.dark [style*="position: fixed"][style*="background"] {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(8px);
+}
+
+.dark [style*="borderRadius: '8px'"][style*="boxShadow"] {
+  background: linear-gradient(135deg, #1f2937 0%, #1a1f2e 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* ===== SCROLLBAR ===== */
+.dark ::-webkit-scrollbar {
+  width: 12px;
+  background-color: #0f1419;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1a1f2e;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #4f46e5 0%, #6366f1 100%);
+  border-radius: 10px;
+  border: 2px solid #1a1f2e;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #6366f1 0%, #818cf8 100%);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+/* ===== MISC ===== */
+.dark a {
+  color: #818cf8;
+  transition: color 0.2s ease;
+}
+
+.dark a:hover {
+  color: #a5b4fc;
+  text-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
+}
+
+.dark hr {
+  border-color: rgba(75, 85, 99, 0.3) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark [style*="fontFamily: 'monospace'"] {
+  color: #a5b4fc !important;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.dark .text-white {
+  color: #ffffff !important;
+}
+
+/* Hover states */
+.dark [class*="hover:bg-slate"]:hover {
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.dark [class*="hover:bg-red"]:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Focus rings */
+.dark *:focus {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+}
+
+/* Selection */
+.dark ::selection {
+  background: rgba(99, 102, 241, 0.4);
+  color: #ffffff;
+}

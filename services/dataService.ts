@@ -168,6 +168,129 @@ export class DataService {
     }
   }
 
+  async getDeviceMappings() {
+    try {
+      const response = await fetch(`${API_BASE}/device-mappings`);
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async addDeviceMapping(mapping: { user_id: number; device_id: string; ip_address?: string }) {
+    try {
+      const response = await fetch(`${API_BASE}/device-mappings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mapping)
+      });
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async deleteDeviceMapping(id: number | string) {
+    try {
+      const response = await fetch(`${API_BASE}/device-mappings/${id}`, {
+        method: 'DELETE'
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async getUnregisteredSessions() {
+    try {
+      const response = await fetch(`${API_BASE}/unregistered-sessions`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async registerUserFromSession(data: { name: string; email: string; phone?: string; usertype_id: number; session_id: string; device_id?: string; windows_username?: string }) {
+    try {
+      const response = await fetch(`${API_BASE}/register-user-from-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async mapUserToSession(data: { user_id: number; session_id: string; device_id?: string; windows_username?: string }) {
+    try {
+      const response = await fetch(`${API_BASE}/map-user-to-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async getWindowsUsernameMappings() {
+    try {
+      const response = await fetch(`${API_BASE}/windows-username-mappings`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async addWindowsUsernameMapping(mapping: { user_id: number; windows_username: string }) {
+    try {
+      const response = await fetch(`${API_BASE}/windows-username-mappings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mapping)
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async deleteWindowsUsernameMapping(id: number | string) {
+    try {
+      const response = await fetch(`${API_BASE}/windows-username-mappings/${id}`, {
+        method: 'DELETE'
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async getUserTypes() {
+    try {
+      const response = await fetch(`${API_BASE}/usertypes`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+
   async getUserTimeline(userId: string | number, range: string, timezone: string = 'UTC') {
     try {
       const response = await fetch(`${API_BASE}/user-timeline?user=${userId}&range=${range}&timezone=${encodeURIComponent(timezone)}`);
