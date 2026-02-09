@@ -10,6 +10,7 @@ import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
 import DeviceMappingsPage from './pages/DeviceMappingsPage';
 import UnregisteredSessionsPage from './pages/UnregisteredSessionsPage';
+import StealthUsersPage from './pages/StealthUsersPage';
 import LoginPage from './pages/LoginPage';
 import { ExportProvider } from './contexts/ExportContext';
 import { TimezoneProvider } from './contexts/TimezoneContext';
@@ -18,6 +19,7 @@ enum Page {
   EXECUTIVE = 'executive',
   SUMMARY = 'summary',
   DASHBOARD = 'dashboard',
+  STEALTH_USERS = 'stealth-users',
   USERS = 'users',
   DEVICE_MAPPINGS = 'device-mappings',
   UNREGISTERED_SESSIONS = 'unregistered-sessions',
@@ -30,21 +32,12 @@ const PAGE_STORAGE_KEY = 'dashboard_current_page';
 const validPages = Object.values(Page) as string[];
 
 const App: React.FC = () => {
-  // Load saved page from localStorage, default to Executive
-  const [currentPage, setCurrentPage] = useState<Page>(() => {
-    const saved = localStorage.getItem(PAGE_STORAGE_KEY);
-    if (saved && validPages.includes(saved)) {
-      return saved as Page;
-    }
-    return Page.EXECUTIVE;
-  });
+  // Always start at Executive Dashboard on page load
+  const [currentPage, setCurrentPage] = useState<Page>(Page.EXECUTIVE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
 
-  // Persist page changes to localStorage
-  useEffect(() => {
-    localStorage.setItem(PAGE_STORAGE_KEY, currentPage);
-  }, [currentPage]);
+  // Note: We don't persist page state anymore - always start fresh at Executive Dashboard
 
   // Session token expiry duration
   const SESSION_DURATION = 24 * 60 * 60 * 1000;
@@ -99,19 +92,12 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     setUser(userData);
     localStorage.setItem('er_session', JSON.stringify(sessionData));
-    
-    // Always reset to Executive Dashboard on login
-    setCurrentPage(Page.EXECUTIVE);
-    localStorage.setItem(PAGE_STORAGE_KEY, Page.EXECUTIVE);
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem('er_session');
-    
-    // Clear saved page preference on logout
-    localStorage.removeItem(PAGE_STORAGE_KEY);
   };
 
   if (!isAuthenticated) {
@@ -123,6 +109,9 @@ const App: React.FC = () => {
       case Page.EXECUTIVE: return <ExecutiveDashboard />;
       case Page.SUMMARY: return <SummaryDashboard />;
       case Page.DASHBOARD: return <MainDashboard />;
+      case Page.STEALTH_USERS:
+        // Only allow admin users to view stealth users
+        return user?.type === 'admin' ? <StealthUsersPage /> : <ExecutiveDashboard />;
       case Page.USERS: return <UsersPage />;
       case Page.DEVICE_MAPPINGS: 
         // Only allow admin users to view device mappings

@@ -54,16 +54,27 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
     { id: 'executive', label: 'Executive Dashboard', icon: BarChart3 },
     { id: 'summary', label: 'Summary Dashboard', icon: PieChart },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'users', label: 'Users', icon: Users },
   ];
 
-  // Add Device Mappings menu item only for admin users
+  // Add Registered Stealth Users menu item only for admin users at position 4
+  const adminStealthUsers = userType === 'admin' ? [
+    { id: 'stealth-users', label: 'Stealth Users', icon: Users }
+  ] : [];
+
+
+  // Dashboard Users at position 5
+  const dashboardUsersItem = [
+    { id: 'users', label: 'Dashboard Users', icon: UserCircle }
+  ];
+
+  // Additional admin-only items
   const adminMenuItems = userType === 'admin' ? [
     { id: 'device-mappings', label: 'Device Mappings', icon: Server },
     { id: 'unregistered-sessions', label: 'Unregistered Sessions', icon: UserCog }
   ] : [];
 
-  const allMenuItems = [...menuItems, ...adminMenuItems];
+  const allMenuItems = [...menuItems, ...adminStealthUsers, ...dashboardUsersItem, ...adminMenuItems];
+
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">

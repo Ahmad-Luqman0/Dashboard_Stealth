@@ -61,14 +61,20 @@ app.get('/api/users', async (req, res) => {
   try {
     const result = await query(`
       SELECT 
-        u.id, 
-        u.name, 
-        u.email, 
-        u.phone, 
-        u.status, 
-        ut.name as type
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.usertype_id,
+        ut.name as usertype,
+        u.status,
+        u.created_at,
+        COALESCE(COUNT(DISTINCT ss.id), 0) as total_sessions,
+        COALESCE(SUM(ss.total_time) * 1000, 0) as total_time
       FROM users u
       LEFT JOIN usertypes ut ON u.usertype_id = ut.id
+      LEFT JOIN stealth_sessions ss ON u.id = ss.user_id
+      GROUP BY u.id, u.name, u.email, u.phone, u.usertype_id, ut.name, u.status, u.created_at
       ORDER BY u.created_at DESC
     `);
     res.json(result.rows);
