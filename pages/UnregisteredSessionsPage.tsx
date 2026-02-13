@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataService';
+import { Plus, UserCheck, Link as LinkIcon, Trash2, X, Monitor, User as UserIcon, Settings, Shield, Clock, ExternalLink, ShieldAlert } from 'lucide-react';
 
 interface UnregisteredSession {
   id: number;
@@ -192,128 +193,141 @@ const UnregisteredSessionsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px' }}>
-          Unregistered Sessions Management
-        </h1>
-        <p style={{ color: '#6b7280', fontSize: '14px' }}>
-          Manage stealth sessions from unregistered users and Windows username mappings
-        </p>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
+            Unregistered Sessions Management
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+            <Shield size={16} className="text-amber-500" />
+            Manage stealth sessions from unregistered users and Windows username mappings
+          </p>
+        </div>
+        
+        {activeTab === 'mappings' && (
+          <button
+            onClick={() => setShowWindowsMappingModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-200 dark:shadow-none font-semibold"
+          >
+            <Plus size={18} />
+            Add Mapping
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: '2px solid #e5e7eb', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setActiveTab('sessions')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'sessions' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeTab === 'sessions' ? '#3b82f6' : '#6b7280',
-              fontWeight: activeTab === 'sessions' ? '600' : '500',
-              cursor: 'pointer',
-              marginBottom: '-2px'
-            }}
-          >
-            Unregistered Sessions
-          </button>
-          <button
-            onClick={() => setActiveTab('mappings')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'mappings' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeTab === 'mappings' ? '#3b82f6' : '#6b7280',
-              fontWeight: activeTab === 'mappings' ? '600' : '500',
-              cursor: 'pointer',
-              marginBottom: '-2px'
-            }}
-          >
-            Windows Username Mappings
-          </button>
-        </div>
+      <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-2xl w-fit border border-slate-200 dark:border-slate-700/50">
+        <button
+          onClick={() => setActiveTab('sessions')}
+          className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'sessions' 
+              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md' 
+              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <ShieldAlert size={18} />
+          Unregistered Sessions
+        </button>
+        <button
+          onClick={() => setActiveTab('mappings')}
+          className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'mappings' 
+              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-md' 
+              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          <LinkIcon size={18} />
+          Windows Username Mappings
+        </button>
       </div>
 
-      {error && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: '#fee2e2',
-          border: '1px solid #fca5a5',
-          borderRadius: '6px',
-          color: '#991b1b',
-          marginBottom: '16px'
-        }}>
-          {error}
-        </div>
-      )}
+      {/* Alerts */}
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-slide-in">
+            <Shield size={18} />
+            {error}
+          </div>
+        )}
 
-      {success && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: '#d1fae5',
-          border: '1px solid #6ee7b7',
-          borderRadius: '6px',
-          color: '#065f46',
-          marginBottom: '16px'
-        }}>
-          {success}
-        </div>
-      )}
+        {success && (
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-3 animate-slide-in">
+            <UserCheck size={18} />
+            {success}
+          </div>
+        )}
+      </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+        <div className="flex flex-col items-center justify-center py-20 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+          <p className="text-slate-500 font-medium">Synchronizing data...</p>
+        </div>
       ) : activeTab === 'sessions' ? (
-        <div>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <tr>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>System Info</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Windows User</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Device ID</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Activity</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Created</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">System Info</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Windows User</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Device ID</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Activity</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {sessions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-                      No unregistered sessions found.
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 opacity-50">
+                        <Monitor size={48} className="text-slate-300" />
+                        <p className="text-slate-500 font-medium italic">No unregistered sessions found</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   sessions.map((session) => (
-                    <tr key={session.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>{session.system_name || 'Unknown'}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{session.ip_address || '-'}</div>
+                    <tr key={session.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{session.system_name || 'Unknown System'}</div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                          <Settings size={12} />
+                          {session.ip_address || 'No IP recorded'}
+                        </div>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: 'monospace', color: '#374151' }}>
-                        {session.windows_username || '-'}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold">
+                          {session.windows_username || '-'}
+                        </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', fontFamily: 'monospace', color: '#6b7280' }}>
-                        {session.device_id || '-'}
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500 italic">
+                          {session.device_id || '-'}
+                        </span>
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontSize: '13px', color: '#374151' }}>Total: {formatTime(session.total_time)}</div>
-                        <div style={{ fontSize: '11px', color: '#10b981' }}>Prod: {formatTime(session.productive_time)}</div>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5">
+                            <Clock size={12} className="text-indigo-500" />
+                            {formatTime(session.total_time)}
+                          </div>
+                          <div className="w-20 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-indigo-500" 
+                              style={{ width: `${Math.min(100, (session.productive_time/session.total_time)*100)}%` }}
+                            />
+                          </div>
+                        </div>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>
-                        {new Date(session.created_at).toLocaleDateString()}
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                        {new Date(session.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => {
                               setSelectedSession(session);
@@ -325,17 +339,9 @@ const UnregisteredSessionsPage: React.FC = () => {
                                 usertype_id: ''
                               });
                             }}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              fontWeight: '500'
-                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20"
                           >
+                            <UserCheck size={14} />
                             Register
                           </button>
                           <button
@@ -343,18 +349,10 @@ const UnregisteredSessionsPage: React.FC = () => {
                               setSelectedSession(session);
                               setShowMapModal(true);
                             }}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              fontWeight: '500'
-                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-all border border-transparent hover:border-blue-100 dark:hover:border-blue-500/20"
                           >
-                            Map
+                            <LinkIcon size={14} />
+                            Map User
                           </button>
                         </div>
                       </td>
@@ -366,73 +364,48 @@ const UnregisteredSessionsPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-            <button
-              onClick={() => setShowWindowsMappingModal(true)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
-            >
-              + Add Mapping
-            </button>
-          </div>
-
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <tr>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>User</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Email</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Windows Username</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Created</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Windows Username</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {windowsMappings.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-                      No Windows username mappings found.
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 opacity-50">
+                        <LinkIcon size={48} className="text-slate-300" />
+                        <p className="text-slate-500 font-medium italic">No Windows username mappings found</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   windowsMappings.map((mapping) => (
-                    <tr key={mapping.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1f2937' }}>{mapping.user_name}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{mapping.user_email}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', fontFamily: 'monospace', color: '#374151' }}>
-                        {mapping.windows_username}
+                    <tr key={mapping.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{mapping.user_name}</td>
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{mapping.user_email}</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-mono font-bold">
+                          {mapping.windows_username}
+                        </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                         {new Date(mapping.created_at).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDeleteWindowsMapping(mapping.id)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500'
-                          }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
+                          title="Delete Mapping"
                         >
-                          Delete
+                          <Trash2 size={18} />
                         </button>
                       </td>
                     </tr>
@@ -446,155 +419,102 @@ const UnregisteredSessionsPage: React.FC = () => {
 
       {/* Register User Modal */}
       {showRegisterModal && selectedSession && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#1f2937' }}>
-              Register New User
-            </h2>
-
-            <div style={{ backgroundColor: '#f3f4f6', padding: '12px', borderRadius: '6px', marginBottom: '20px', fontSize: '13px' }}>
-              <div style={{ marginBottom: '4px' }}><strong>System:</strong> {selectedSession.system_name}</div>
-              <div style={{ marginBottom: '4px' }}><strong>Windows User:</strong> {selectedSession.windows_username || '-'}</div>
-              <div><strong>Device ID:</strong> {selectedSession.device_id || '-'}</div>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Register User</h2>
+              <button 
+                onClick={() => {
+                  setShowRegisterModal(false);
+                  setRegisterForm({ name: '', email: '', phone: '', usertype_id: '' });
+                  setSelectedSession(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
             </div>
 
-            <form onSubmit={handleRegisterUser}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Name *
-                </label>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mb-6 border border-slate-100 dark:border-slate-700/50 text-sm">
+              <div className="flex justify-between mb-2">
+                <span className="text-slate-500 dark:text-slate-400">System:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{selectedSession.system_name}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-slate-500 dark:text-slate-400">Windows User:</span>
+                <span className="font-semibold text-slate-900 dark:text-white font-monospace">{selectedSession.windows_username || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Device ID:</span>
+                <span className="font-semibold text-slate-900 dark:text-white font-monospace text-xs">{selectedSession.device_id || '-'}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleRegisterUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Name *</label>
                 <input
                   type="text"
                   value={registerForm.name}
                   onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  placeholder="Full Name"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Email *
-                </label>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email *</label>
                 <input
                   type="email"
                   value={registerForm.email}
                   onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  placeholder="email@example.com"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Phone (Optional)
-                </label>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Phone (Optional)</label>
                 <input
                   type="text"
                   value={registerForm.phone}
                   onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  User Type *
-                </label>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">User Type *</label>
                 <select
                   value={registerForm.usertype_id}
                   onChange={(e) => setRegisterForm({ ...registerForm, usertype_id: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                 >
                   <option value="">Select user type</option>
                   {userTypes.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
+                    <option key={type.id} value={type.id}>{type.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowRegisterModal(false);
                     setRegisterForm({ name: '', email: '', phone: '', usertype_id: '' });
                     setSelectedSession(null);
-                    setError('');
                   }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
                 >
                   Register User
                 </button>
@@ -606,94 +526,68 @@ const UnregisteredSessionsPage: React.FC = () => {
 
       {/* Map User Modal */}
       {showMapModal && selectedSession && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#1f2937' }}>
-              Map Existing User to Session
-            </h2>
-
-            <div style={{ backgroundColor: '#f3f4f6', padding: '12px', borderRadius: '6px', marginBottom: '20px', fontSize: '13px' }}>
-              <div style={{ marginBottom: '4px' }}><strong>System:</strong> {selectedSession.system_name}</div>
-              <div style={{ marginBottom: '4px' }}><strong>Windows User:</strong> {selectedSession.windows_username || '-'}</div>
-              <div><strong>Device ID:</strong> {selectedSession.device_id || '-'}</div>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Map User</h2>
+              <button 
+                onClick={() => {
+                  setShowMapModal(false);
+                  setMapForm({ user_id: '' });
+                  setSelectedSession(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
             </div>
 
-            <form onSubmit={handleMapUser}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Select User *
-                </label>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mb-6 border border-slate-100 dark:border-slate-700/50 text-sm">
+              <div className="flex justify-between mb-2">
+                <span className="text-slate-500 dark:text-slate-400">System:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{selectedSession.system_name}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-slate-500 dark:text-slate-400">Windows User:</span>
+                <span className="font-semibold text-slate-900 dark:text-white font-monospace">{selectedSession.windows_username || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Device ID:</span>
+                <span className="font-semibold text-slate-900 dark:text-white font-monospace text-xs">{selectedSession.device_id || '-'}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleMapUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Select User *</label>
                 <select
                   value={mapForm.user_id}
                   onChange={(e) => setMapForm({ ...mapForm, user_id: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                 >
                   <option value="">Select a user</option>
                   {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
+                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowMapModal(false);
                     setMapForm({ user_id: '' });
                     setSelectedSession(null);
-                    setError('');
                   }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
                 >
                   Map User
                 </button>
@@ -705,108 +599,63 @@ const UnregisteredSessionsPage: React.FC = () => {
 
       {/* Windows Username Mapping Modal */}
       {showWindowsMappingModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#1f2937' }}>
-              Add Windows Username Mapping
-            </h2>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Add Mapping</h2>
+              <button 
+                onClick={() => {
+                  setShowWindowsMappingModal(false);
+                  setWindowsMappingForm({ user_id: '', windows_username: '' });
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-            <form onSubmit={handleAddWindowsMapping}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  User *
-                </label>
+            <form onSubmit={handleAddWindowsMapping} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">User *</label>
                 <select
                   value={windowsMappingForm.user_id}
                   onChange={(e) => setWindowsMappingForm({ ...windowsMappingForm, user_id: e.target.value })}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                 >
                   <option value="">Select a user</option>
                   {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
+                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Windows Username *
-                </label>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Windows Username *</label>
                 <input
                   type="text"
                   value={windowsMappingForm.windows_username}
                   onChange={(e) => setWindowsMappingForm({ ...windowsMappingForm, windows_username: e.target.value })}
                   required
                   placeholder="e.g., john.doe"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowWindowsMappingModal(false);
                     setWindowsMappingForm({ user_id: '', windows_username: '' });
-                    setError('');
                   }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
                 >
                   Add Mapping
                 </button>
