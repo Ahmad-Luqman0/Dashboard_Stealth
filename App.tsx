@@ -111,7 +111,7 @@ const App: React.FC = () => {
       case Page.DASHBOARD: return <MainDashboard />;
       case Page.STEALTH_USERS:
         // Only allow admin users to view stealth users
-        return user?.type === 'admin' ? <StealthUsersPage /> : <ExecutiveDashboard />;
+        return user?.type === 'admin' ? <StealthUsersPage userType={user?.type} /> : <ExecutiveDashboard />;
       case Page.USERS: return <UsersPage />;
       case Page.DEVICE_MAPPINGS: 
         // Only allow admin users to view device mappings

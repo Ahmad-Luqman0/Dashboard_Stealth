@@ -168,6 +168,34 @@ export class DataService {
     }
   }
 
+  async addUser(userData: any) {
+    try {
+      const response = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
+  async deleteUser(id: number | string) {
+    try {
+      const response = await fetch(`${API_BASE}/users/${id}`, {
+        method: 'DELETE',
+      });
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { error: 'Connection failure' };
+    }
+  }
+
   async getDeviceMappings() {
     try {
       const response = await fetch(`${API_BASE}/device-mappings`);

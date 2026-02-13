@@ -69,7 +69,7 @@ app.get('/api/users', async (req, res) => {
         ut.name as usertype,
         u.status,
         u.created_at,
-        COALESCE(COUNT(DISTINCT ss.id), 0) as total_sessions,
+        COALESCE(COUNT(DISTINCT ss.date), 0) as total_sessions,
         COALESCE(SUM(ss.total_time) * 1000, 0) as total_time
       FROM users u
       LEFT JOIN usertypes ut ON u.usertype_id = ut.id
@@ -81,6 +81,66 @@ app.get('/api/users', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Add new monitored user with shift
+app.post('/api/users', async (req, res) => {
+  const { name, email, phone, usertype_id, password, shift_start, shift_end, breaktime_start, breaktime_end } = req.body;
+  
+  if (!name || !email || !usertype_id) {
+    return res.status(400).json({ error: 'Name, email, and usertype_id are required' });
+  }
+
+  try {
+    await query('BEGIN');
+    
+    // 1. Insert into users table
+    const userResult = await query(
+      `INSERT INTO users (name, email, phone, password, usertype_id, status) 
+       VALUES ($1, $2, $3, $4, $5, 'active') 
+       RETURNING id`,
+      [name, email, phone || null, password || 'changeme123', usertype_id]
+    );
+    
+    const userId = userResult.rows[0].id;
+    
+    // 2. Insert into user_shifts table
+    if (shift_start && shift_end) {
+      await query(
+        `INSERT INTO user_shifts (user_id, shift_start, shift_end, breaktime_start, breaktime_end)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, shift_start, shift_end, breaktime_start || null, breaktime_end || null]
+      );
+    }
+    
+    await query('COMMIT');
+    res.json({ success: true, id: userId });
+  } catch (err) {
+    await query('ROLLBACK');
+    console.error(err);
+    if (err.code === '23505') {
+      res.status(400).json({ error: 'Email already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to add monitored user' });
+    }
+  }
+});
+
+// Delete monitored user
+app.delete('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Note: Database schema should have CASCADE deletes for user_shifts and stealth_sessions
+    const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length > 0) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
