@@ -336,7 +336,7 @@ const SummaryDashboard: React.FC = () => {
       </div>
 
       {/* Filter Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+      <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-slate-500">Shift:</label>
           <select 
@@ -401,37 +401,39 @@ const SummaryDashboard: React.FC = () => {
       </div>
 
       {/* Top Productive Apps */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Top Used Productive Websites & Apps</h2>
-          <table className="w-full text-sm text-left">
-              <thead className="bg-blue-50/50 text-slate-500 font-bold text-xs uppercase">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+            <h2 className="text-sm font-bold text-slate-700">Top Used Productive Websites & Apps</h2>
+          </div>
+          <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-100">
                   <tr>
-                      <th className="px-4 py-3">Name</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Total Time</th>
-                      <th className="px-4 py-3 text-right">% of Usage</th>
+                      <th className="px-6 py-4">Name</th>
+                      <th className="px-6 py-4">Category</th>
+                      <th className="px-6 py-4">Total Time</th>
+                      <th className="px-6 py-4 text-right">% of Usage</th>
                   </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                   {productiveApps.map((app, i) => {
                       const isUrl = app.name.includes('(URL)') || app.name.includes('.');
                       const url = isUrl ? `https://${app.name.replace(' (URL)', '').replace(' (APP)', '')}` : '#';
                       return (
-                      <tr key={i} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-blue-600 font-medium">
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
                               {isUrl ? (
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
-                                      {app.name} <ExternalLink size={12} />
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="table-item-label flex items-center gap-1 hover:underline font-bold transition-colors">
+                                      {app.name} <ExternalLink size={10} className="opacity-70" />
                                   </a>
                               ) : (
-                                  <span className="flex items-center gap-2">
+                                  <span className="table-item-label flex items-center gap-1 font-bold">
                                       {app.name}
                                   </span>
                               )}
                           </td>
-                          <td className="px-4 py-3 text-slate-500">{app.category}</td>
-                          <td className="px-4 py-3 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
-                          <td className="px-4 py-3 text-slate-500 text-right">{((Number(app.total_time) / Number(data.productive_time || 1)) * 100).toFixed(2)}%</td>
+                          <td className="px-6 py-4 text-slate-500">{app.category}</td>
+                          <td className="px-6 py-4 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
+                          <td className="px-6 py-4 text-slate-500 text-right font-bold">{((Number(app.total_time) / Number(data.productive_time || 1)) * 100).toFixed(1)}%</td>
                       </tr>
                       );
                   })}
@@ -440,37 +442,39 @@ const SummaryDashboard: React.FC = () => {
       </div>
 
        {/* Top Unproductive Apps */}
-       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Top Used Unproductive Websites & Apps</h2>
-          <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase">
+       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+            <h2 className="text-sm font-bold text-slate-700">Top Used Unproductive Websites & Apps</h2>
+          </div>
+          <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-100">
                   <tr>
-                      <th className="px-4 py-3">Name</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Total Time</th>
-                      <th className="px-4 py-3 text-right">% of Usage</th>
+                      <th className="px-6 py-4">Name</th>
+                      <th className="px-6 py-4">Category</th>
+                      <th className="px-6 py-4">Total Time</th>
+                      <th className="px-6 py-4 text-right">% of Usage</th>
                   </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                   {unproductiveApps.map((app, i) => {
                       const isUrl = app.name.includes('(URL)') || app.name.includes('.');
                       const url = isUrl ? `https://${app.name.replace(' (URL)', '').replace(' (APP)', '')}` : '#';
                       return (
-                      <tr key={i} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-blue-600 font-medium">
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
                               {isUrl ? (
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
-                                      {app.name} <ExternalLink size={12} />
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="table-item-label flex items-center gap-1 hover:underline font-bold transition-colors">
+                                      {app.name} <ExternalLink size={10} className="opacity-70" />
                                   </a>
                               ) : (
-                                  <span className="flex items-center gap-2">
+                                  <span className="table-item-label flex items-center gap-1 font-bold">
                                       {app.name}
                                   </span>
                               )}
                           </td>
-                          <td className="px-4 py-3 text-slate-500">{app.category}</td>
-                          <td className="px-4 py-3 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
-                          <td className="px-4 py-3 text-slate-500 text-right">{((Number(app.total_time) / Number(data.unproductive_time || 1)) * 100).toFixed(2)}%</td>
+                          <td className="px-6 py-4 text-slate-500">{app.category}</td>
+                          <td className="px-6 py-4 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
+                          <td className="px-6 py-4 text-slate-500 text-right font-bold">{((Number(app.total_time) / Number(data.unproductive_time || 1)) * 100).toFixed(1)}%</td>
                       </tr>
                       );
                   })}
@@ -479,9 +483,11 @@ const SummaryDashboard: React.FC = () => {
       </div>
 
        {/* Lowest Activity Difference */}
-       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6">
-          <h2 className="text-lg font-bold text-slate-800 mb-6">Users With Lowest Activity Difference</h2>
-          <div className="space-y-6">
+       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+            <h2 className="text-sm font-bold text-slate-700">Users With Lowest Activity Difference</h2>
+          </div>
+          <div className="p-8 space-y-8">
               {userActivity.map((user, i) => {
                   const activityPct = user.total_time > 0 ? ((user.productive_time / user.total_time) * 100).toFixed(0) : 0;
                   const maxTime = Math.max(...userActivity.map(u => Number(u.total_time)), 3600); // Avoid div/0, min 1hr baseline
@@ -511,9 +517,11 @@ const SummaryDashboard: React.FC = () => {
       {/* Charts Section */}
       <div className="space-y-6">
           {/* Row 1: Highest % Unproductive Time (Full Width) */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-slate-800 mb-4">Highest % Unproductive Time On Websites And Apps</h2>
-              <div className="h-64">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+                <h2 className="text-sm font-bold text-slate-700">Highest % Unproductive Time On Websites And Apps</h2>
+              </div>
+              <div className="p-8 h-80">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData.unproductive}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -544,9 +552,11 @@ const SummaryDashboard: React.FC = () => {
           {/* Row 2: Trends Charts (2 Columns) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Tracked & Productive Time Trends */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                  <h2 className="text-lg font-bold text-slate-800 mb-4">Tracked & Productive Time Trends</h2>
-                  <div className="h-64">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+                    <h2 className="text-sm font-bold text-slate-700">Tracked & Productive Time Trends</h2>
+                  </div>
+                  <div className="p-8 h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -566,9 +576,11 @@ const SummaryDashboard: React.FC = () => {
               </div>
 
               {/* Break & Idle Time Trends */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                  <h2 className="text-lg font-bold text-slate-800 mb-4">Break & Idle Time Trends</h2>
-                  <div className="h-64">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-6 bg-slate-50/30 flex items-center justify-between border-b border-slate-100">
+                    <h2 className="text-sm font-bold text-slate-700">Break & Idle Time Trends</h2>
+                  </div>
+                  <div className="p-8 h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />

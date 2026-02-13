@@ -83,8 +83,33 @@ const ExecutiveDashboard: React.FC = () => {
         const progress = tracked > 0 ? (active / tracked) * 100 : 0;
 
          return (
-             <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
-                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+             <div 
+                className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100vw',
+                    height: '100vh',
+                    margin: 0,
+                    padding: '16px',
+                    boxSizing: 'border-box',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0
+                }}
+                onClick={() => setSelectedUser(null)}
+             >
+                 <div 
+                    className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                    style={{
+                        margin: '0 auto',
+                        position: 'relative'
+                    }}
+                    onClick={e => e.stopPropagation()}
+                 >
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 className="text-lg font-bold text-slate-800">User Details</h3>
                         <button onClick={() => setSelectedUser(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
@@ -286,10 +311,10 @@ const ExecutiveDashboard: React.FC = () => {
   const renderExpandedContent = (rowId: string) => {
     if (rowId === 'login') {
       return (
-        <div className="bg-white p-6 border-t border-slate-100">
-             <h3 className="text-sm font-bold text-slate-700 mb-4">User Activity Level Distribution</h3>
-             <div className="space-y-4">
-                 <div className="grid grid-cols-[120px_1fr] gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        <div className="bg-white p-8 border-t border-slate-100">
+             <h3 className="text-sm font-bold text-slate-700 mb-6 px-2">User Activity Level Distribution</h3>
+             <div className="space-y-6">
+                 <div className="grid grid-cols-[150px_1fr] gap-6 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-2">
                      <div>Activity Level</div>
                      <div>Users</div>
                  </div>
@@ -337,95 +362,7 @@ const ExecutiveDashboard: React.FC = () => {
                      </div>
                  ))}
              </div>
-             
-             {/* Modal Overlay for Category List (keep legacy support) */}
-             {selectedCategory && (
-                <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedCategory(null)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-                        {/* Modal Header */}
-                        <div className={`p-6 border-b border-slate-100 flex justify-between items-center ${
-                             selectedCategory.label === 'Very High' ? 'bg-green-50' :
-                             selectedCategory.label === 'High' ? 'bg-yellow-50' :
-                             selectedCategory.label === 'Low' ? 'bg-orange-50' : 'bg-red-50'
-                        }`}>
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800">{selectedCategory.label} Activity Users</h3>
-                                <p className="text-slate-500 text-sm mt-1">Total users: {selectedCategory.users.length}</p>
-                            </div>
-                            <button onClick={() => setSelectedCategory(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-500">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        
-                        {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto bg-slate-50/50">
-                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {selectedCategory.users.map((user, idx) => {
-                                     const tracked = Number(user.tracked);
-                                     const idle = Number(user.idle);
-                                     const breakTime = Number(user.break_time || 0);
-                                     const active = tracked - idle - breakTime; 
-                                     const productive = Number(user.productive);
-                                     
-                                     // Activity Level = (Active Time / Total Tracked Time) * 100
-                                     const progress = tracked > 0 ? (active / tracked) * 100 : 0;
-                                     
-                                     return (
-                                         <div key={idx} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
-                                             <div className="flex justify-between items-start">
-                                                 <div>
-                                                     <h4 className="font-bold text-slate-800 text-lg leading-tight">{user.name}</h4>
-                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-xs text-slate-500">Activity Level:</span>
-                                                        <span className="text-sm font-bold text-slate-700">{progress.toFixed(1)}%</span>
-                                                     </div>
-                                                 </div>
-                                                 <span className="text-lg font-bold text-slate-400">{progress.toFixed(1)}%</span>
-                                             </div>
-                                             
-                                             <div className="grid grid-cols-5 gap-2 text-center text-xs">
-                                                 <div className="space-y-1">
-                                                     <p className="text-green-600 font-bold">Active</p>
-                                                     <p className="text-slate-600 font-medium">{formatDuration(active)}</p>
-                                                 </div>
-                                                 <div className="space-y-1">
-                                                     <p className="text-amber-500 font-bold">Idle</p>
-                                                     <p className="text-slate-600 font-medium">{formatDuration(idle)}</p>
-                                                 </div>
-                                                  <div className="space-y-1">
-                                                     <p className="text-purple-500 font-bold">Break</p>
-                                                     <p className="text-slate-600 font-medium">{formatDuration(breakTime)}</p>
-                                                 </div>
-                                                 <div className="space-y-1">
-                                                     <p className="text-blue-600 font-bold">Productive</p>
-                                                     <p className="text-slate-600 font-medium">{formatDuration(productive)}</p>
-                                                 </div>
-                                                 <div className="space-y-1">
-                                                     <p className="text-blue-600 font-bold">Tracked</p>
-                                                     <p className="text-slate-600 font-medium">{formatDuration(tracked)}</p>
-                                                 </div>
-                                             </div>
-
-                                             <div className="space-y-1.5 pt-2 border-t border-slate-50">
-                                                 <div className="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                                                     <span>Activity Progress</span>
-                                                     <span>{progress.toFixed(1)}%</span>
-                                                 </div>
-                                                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                                     <div 
-                                                        className={`h-full rounded-full ${progress >= 85 ? 'bg-green-500' : progress >= 50 ? 'bg-blue-500' : 'bg-red-500'}`} 
-                                                        style={{ width: `${progress}%` }} 
-                                                     />
-                                                 </div>
-                                             </div>
-                                         </div>
-                                     );
-                                 })}
-                             </div>
-                        </div>
-                    </div>
-                </div>
-             )}
+                          
         </div>
       );
 
@@ -439,9 +376,9 @@ const ExecutiveDashboard: React.FC = () => {
            { id: 'session-idle', label: 'Idle Time', actual: data?.idle_time, target: targetIdle, apps: topIdleUsers, type: 'user' },
        ];
        return (
-           <div className="bg-blue-50/30 p-4 border-t border-slate-100">
+           <div className="bg-slate-50/50 p-4 border-t border-slate-100">
                <table className="w-full text-sm">
-                   <thead className="text-slate-500 font-semibold bg-blue-100/50">
+                   <thead className="text-slate-500 font-semibold bg-slate-100/50">
                        <tr>
                            <th className="px-6 py-3 text-left w-12"></th>
                            <th className="px-6 py-3 text-left"></th>
@@ -493,79 +430,81 @@ const ExecutiveDashboard: React.FC = () => {
                                    </td>
                                </tr>
                                {isExpanded && hasApps && (
-                                   <tr>
-                                       <td colSpan={6} className="bg-white p-4 pl-16">
-                                           <table className="w-full text-xs">
-                                               {b.type === 'user' ? (
-                                                    <thead className="text-slate-400 border-b border-slate-100">
-                                                        <tr>
-                                                            <th className="py-2 text-left w-1/2">User</th>
-                                                            <th className="py-2 text-right w-1/4">Idle Minutes</th>
-                                                            <th className="py-2 text-right w-1/4">Percentage Idle Time</th>
-                                                        </tr>
-                                                    </thead>
-                                               ) : (
-                                                    <thead className="text-slate-400 border-b border-slate-100">
-                                                        <tr>
-                                                            <th className="py-2 text-left">App/Website</th>
-                                                            <th className="py-2 text-left">Category</th>
-                                                            <th className="py-2 text-left">Time</th>
-                                                            <th className="py-2 text-left">%</th>
-                                                        </tr>
-                                                    </thead>
-                                               )}
-                                               <tbody>
-                                                   {b.apps.map((app: any, idx: number) => {
-                                                        const totalSecs = Number(b.actual) || 1;
-                                                        const appPct = ((Number(app.total_time) / totalSecs) * 100).toFixed(1);
-                                                        
-                                                        if (b.type === 'user') {
-                                                            // User Row Render
+                                    <tr>
+                                        <td colSpan={6} className="bg-slate-50/50 p-8 pl-20">
+                                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                                <table className="w-full text-xs border-collapse">
+                                                    {b.type === 'user' ? (
+                                                        <thead className="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
+                                                            <tr>
+                                                                <th className="px-6 py-4 text-left w-1/2">User</th>
+                                                                <th className="px-6 py-4 text-right w-1/4">Idle Minutes</th>
+                                                                <th className="px-6 py-4 text-right w-1/4">Percentage Idle Time</th>
+                                                            </tr>
+                                                        </thead>
+                                                    ) : (
+                                                        <thead className="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
+                                                            <tr>
+                                                                <th className="px-6 py-4 text-left">App/Website</th>
+                                                                <th className="px-6 py-4 text-left">Category</th>
+                                                                <th className="px-6 py-4 text-left">Time</th>
+                                                                <th className="px-6 py-4 text-left">%</th>
+                                                            </tr>
+                                                        </thead>
+                                                    )}
+                                                    <tbody>
+                                                        {b.apps.map((app: any, idx: number) => {
+                                                            const totalSecs = Number(b.actual) || 1;
+                                                            const appPct = ((Number(app.total_time) / totalSecs) * 100).toFixed(1);
+                                                            
+                                                            if (b.type === 'user') {
+                                                                // User Row Render
+                                                                return (
+                                                                    <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                                        <td className="px-6 py-4">
+                                                                            <button 
+                                                                                onClick={(e) => { e.stopPropagation(); setSelectedUser(app); }}
+                                                                                className="table-item-label hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                                                                            >
+                                                                                {app.name}
+                                                                            </button>
+                                                                        </td>
+                                                                        <td className="px-6 py-4 text-slate-600 text-right font-medium">{formatDuration(app.total_time)}</td>
+                                                                        <td className="px-6 py-4 font-bold text-red-500 text-right">{appPct}%</td>
+                                                                    </tr>
+                                                                );
+                                                            }
+
+                                                            // App Row Render
+                                                            const isUrl = app.name.includes('(URL)') || (app.name.includes('.') && !app.name.includes('(APP)'));
+                                                            const cleanName = app.name.replace(' (URL)', '').replace(' (APP)', '');
+                                                            const url = isUrl ? `https://${cleanName}` : '#';
+
                                                             return (
-                                                                <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-                                                                    <td className="py-2 font-medium text-blue-600">
-                                                                        <button 
-                                                                            onClick={(e) => { e.stopPropagation(); setSelectedUser(app); }}
-                                                                            className="hover:underline flex items-center gap-1 cursor-pointer"
-                                                                        >
-                                                                            {app.name}
-                                                                        </button>
+                                                                <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                                    <td className="px-6 py-4">
+                                                                        {isUrl ? (
+                                                                            <a href={url} target="_blank" rel="noopener noreferrer" className="table-item-label flex items-center gap-1 hover:underline font-bold transition-colors">
+                                                                                {app.name} <Maximize2 size={10} className="opacity-70" />
+                                                                            </a>
+                                                                        ) : (
+                                                                            <span className="table-item-label flex items-center gap-1 font-bold">
+                                                                                {app.name}
+                                                                            </span>
+                                                                        )}
                                                                     </td>
-                                                                    <td className="py-2 text-slate-600 text-right">{formatDuration(app.total_time)}</td>
-                                                                    <td className="py-2 font-bold text-red-500 text-right">{appPct}%</td>
+                                                                    <td className="px-6 py-4 text-slate-500">{app.category}</td>
+                                                                    <td className="px-6 py-4 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
+                                                                    <td className="px-6 py-4 text-slate-400 font-bold">{appPct}%</td>
                                                                 </tr>
                                                             );
-                                                        }
-
-                                                        // App Row Render
-                                                        const isUrl = app.name.includes('(URL)') || (app.name.includes('.') && !app.name.includes('(APP)'));
-                                                        const cleanName = app.name.replace(' (URL)', '').replace(' (APP)', '');
-                                                        const url = isUrl ? `https://${cleanName}` : '#';
-
-                                                       return (
-                                                           <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-                                                               <td className="py-2 font-medium text-blue-600">
-                                                                    {isUrl ? (
-                                                                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline hover:text-blue-800 font-bold transition-colors">
-                                                                            {app.name} <Maximize2 size={10} className="text-blue-400" />
-                                                                        </a>
-                                                                    ) : (
-                                                                        <span className="flex items-center gap-1 font-bold">
-                                                                            {app.name}
-                                                                        </span>
-                                                                    )}
-                                                               </td>
-                                                               <td className="py-2 text-slate-500">{app.category}</td>
-                                                               <td className="py-2 text-slate-600">{formatDuration(app.total_time)}</td>
-                                                               <td className="py-2 text-slate-400">{appPct}%</td>
-                                                           </tr>
-                                                       );
-                                                   })}
-                                               </tbody>
-                                           </table>
-                                       </td>
-                                   </tr>
-                               )}
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                                </React.Fragment>
                            );
                        })}
@@ -576,46 +515,48 @@ const ExecutiveDashboard: React.FC = () => {
     }
     if (rowId === 'productivity') {
         return (
-            <div className="bg-blue-50/30 p-4 border-t border-slate-100">
-                <table className="w-full text-sm">
-                    <thead className="text-slate-500 font-semibold bg-blue-100/50">
-                        <tr>
-                            <th className="px-4 py-3 text-left">Link</th>
-                            <th className="px-4 py-3 text-left">Category</th>
-                            <th className="px-4 py-3 text-left">Total Time</th>
-                            <th className="px-4 py-3 text-left">Percentage Productive Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {productiveApps.map((app, i) => {
-                            const totalProdSecs = data?.productive_time || 1; 
-                            const percent = ((Number(app.total_time) / totalProdSecs) * 100).toFixed(1);
-                            
-                            const isUrl = app.name.includes('(URL)') || (app.name.includes('.') && !app.name.includes('(APP)'));
-                            const cleanName = app.name.replace(' (URL)', '').replace(' (APP)', '');
-                            const url = isUrl ? `https://${cleanName}` : '#';
-                            
-                            return (
-                                <tr key={i} className="border-b border-blue-100/30 hover:bg-blue-50/50">
-                                    <td className="px-4 py-3 text-blue-600 font-medium">
-                                        {isUrl ? (
-                                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline hover:text-blue-800 font-bold transition-colors">
-                                                {app.name} <Maximize2 size={10} className="text-blue-400" />
-                                            </a>
-                                        ) : (
-                                            <span className="flex items-center gap-1 font-bold">
-                                                {app.name}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-500">{app.category}</td>
-                                    <td className="px-4 py-3 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
-                                    <td className="px-4 py-3 text-slate-500">{percent}%</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            <div className="bg-slate-50/50 p-8 border-t border-slate-100">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <table className="w-full text-sm border-collapse">
+                        <thead className="bg-slate-50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th className="px-6 py-4 text-left">Link</th>
+                                <th className="px-6 py-4 text-left">Category</th>
+                                <th className="px-6 py-4 text-left">Total Time</th>
+                                <th className="px-6 py-4 text-left">Percentage Productive Time</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {productiveApps.map((app, i) => {
+                                const totalProdSecs = data?.productive_time || 1; 
+                                const percent = ((Number(app.total_time) / totalProdSecs) * 100).toFixed(1);
+                                
+                                const isUrl = app.name.includes('(URL)') || (app.name.includes('.') && !app.name.includes('(APP)'));
+                                const cleanName = app.name.replace(' (URL)', '').replace(' (APP)', '');
+                                const url = isUrl ? `https://${cleanName}` : '#';
+                                
+                                return (
+                                    <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            {isUrl ? (
+                                                <a href={url} target="_blank" rel="noopener noreferrer" className="table-item-label flex items-center gap-1 hover:underline font-bold transition-colors">
+                                                    {app.name} <Maximize2 size={10} className="opacity-70" />
+                                                </a>
+                                            ) : (
+                                                <span className="table-item-label flex items-center gap-1 font-bold">
+                                                    {app.name}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-500">{app.category}</td>
+                                        <td className="px-6 py-4 text-slate-600 font-medium">{formatDuration(app.total_time)}</td>
+                                        <td className="px-6 py-4 text-slate-500 font-bold">{percent}%</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         );
     }
@@ -738,8 +679,124 @@ const ExecutiveDashboard: React.FC = () => {
       </div>
 
 
-      
+            
       {selectedUser && renderUserDetail(selectedUser)}
+      
+      {/* Category List Modal - Rendered at top level to avoid positioning issues with table rows */}
+      {selectedCategory && (
+        <div 
+            className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4" 
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100vw',
+                height: '100vh',
+                margin: 0,
+                padding: '16px',
+                boxSizing: 'border-box',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0
+            }}
+            onClick={() => setSelectedCategory(null)}
+        >
+            <div 
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col" 
+                style={{
+                    margin: '0 auto',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Modal Header */}
+                <div className={`p-6 border-b border-slate-100 flex justify-between items-center ${
+                     selectedCategory.label === 'Very High' ? 'bg-green-50' :
+                     selectedCategory.label === 'High' ? 'bg-yellow-50' :
+                     selectedCategory.label === 'Low' ? 'bg-orange-50' : 'bg-red-50'
+                }`}>
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800">{selectedCategory.label} Activity Users</h3>
+                        <p className="text-slate-500 text-sm mt-1">Total users: {selectedCategory.users.length}</p>
+                    </div>
+                    <button onClick={() => setSelectedCategory(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-500">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                {/* Modal Body */}
+                <div className="p-6 overflow-y-auto bg-slate-50/50">
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {selectedCategory.users.map((user, idx) => {
+                             const tracked = Number(user.tracked);
+                             const idle = Number(user.idle);
+                             const breakTime = Number(user.break_time || 0);
+                             const active = tracked - idle - breakTime; 
+                             const productive = Number(user.productive);
+                             
+                             // Activity Level = (Active Time / Total Tracked Time) * 100
+                             const progress = tracked > 0 ? (active / tracked) * 100 : 0;
+                             
+                             return (
+                                 <div key={idx} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                                     <div className="flex justify-between items-start">
+                                         <div>
+                                             <h4 className="font-bold text-slate-800 text-lg leading-tight">{user.name}</h4>
+                                             <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs text-slate-500">Activity Level:</span>
+                                                <span className="text-sm font-bold text-slate-700">{progress.toFixed(1)}%</span>
+                                             </div>
+                                         </div>
+                                         <span className="text-lg font-bold text-slate-400">{progress.toFixed(1)}%</span>
+                                     </div>
+                                     
+                                     <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                                         <div className="space-y-1">
+                                             <p className="text-green-600 font-bold">Active</p>
+                                             <p className="text-slate-600 font-medium">{formatDuration(active)}</p>
+                                         </div>
+                                         <div className="space-y-1">
+                                             <p className="text-amber-500 font-bold">Idle</p>
+                                             <p className="text-slate-600 font-medium">{formatDuration(idle)}</p>
+                                         </div>
+                                          <div className="space-y-1">
+                                             <p className="text-purple-500 font-bold">Break</p>
+                                             <p className="text-slate-600 font-medium">{formatDuration(breakTime)}</p>
+                                         </div>
+                                         <div className="space-y-1">
+                                             <p className="text-blue-600 font-bold">Productive</p>
+                                             <p className="text-slate-600 font-medium">{formatDuration(productive)}</p>
+                                         </div>
+                                         <div className="space-y-1">
+                                             <p className="text-blue-600 font-bold">Tracked</p>
+                                             <p className="text-slate-600 font-medium">{formatDuration(tracked)}</p>
+                                         </div>
+                                     </div>
+
+                                     <div className="space-y-1.5 pt-2 border-t border-slate-50">
+                                         <div className="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                                             <span>Activity Progress</span>
+                                             <span>{progress.toFixed(1)}%</span>
+                                         </div>
+                                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                             <div 
+                                                className={`h-full rounded-full ${progress >= 85 ? 'bg-green-500' : progress >= 50 ? 'bg-blue-500' : 'bg-red-500'}`} 
+                                                style={{ width: `${progress}%` }} 
+                                             />
+                                         </div>
+                                     </div>
+                                 </div>
+                             );
+                         })}
+                     </div>
+                </div>
+            </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-slate-800">Detailed View</h2>
@@ -790,7 +847,7 @@ const ExecutiveDashboard: React.FC = () => {
                     <tr onClick={() => row.hasData && toggleRow(row.id)} className={`transition-colors ${row.hasData ? 'hover:bg-slate-50 cursor-pointer' : ''}`}>
                     <td className="px-6 py-4 text-slate-400">
                         {row.hasData && (
-                            <ChevronRight size={16} className={`transition-transformDuration-200 ${expandedRow.includes(row.id) ? 'rotate-90' : ''}`} />
+                            <ChevronRight size={16} className={`transition-transform duration-200 ${expandedRow.includes(row.id) ? 'rotate-90' : ''}`} />
                         )}
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-700">{row.label}</td>

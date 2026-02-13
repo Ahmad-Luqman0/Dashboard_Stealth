@@ -76,7 +76,8 @@
 .dark [class*="text-slate-700"],
 .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
 .dark td, .dark th, .dark p, 
-.dark span:not([class*="text-blue"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-cyan"]) {
+.dark span:not([class*="text-blue"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-cyan"]):not(.table-item-label),
+.dark button:not(.table-item-label) {
   color: #f3f4f6 !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -103,14 +104,43 @@
   background-color: transparent !important;
 }
 
-/* Table rows with hover effect */
+/* Table rows with glassmorphism feel */
 .dark tbody tr {
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
 }
 
 .dark tbody tr:hover {
-  background: rgba(99, 102, 241, 0.08) !important;
-  transform: scale(1.002);
+  background: rgba(99, 102, 241, 0.12) !important;
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.05);
+}
+
+/* Standardized "Bulletproof" color for table items (Windows, Apps, URLs) - High Specificity needed to override global span rules */
+.dark table tbody td .table-item-label,
+.dark table tbody td a.table-item-label,
+.dark table tbody td span.table-item-label,
+.dark table tbody td button.table-item-label,
+.dark table tbody td .table-item-label * {
+  color: #a5b4fc !important; /* Vibrant Indigo */
+  text-shadow: 0 0 10px rgba(129, 140, 248, 0.3) !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.dark .table-item-label:hover {
+  color: #c7d2fe !important;
+  text-shadow: 0 0 15px rgba(129, 140, 248, 0.5) !important;
+  text-decoration: none !important;
+}
+
+.dark .table-item-label .opacity-70,
+.dark .table-item-label svg,
+.dark .table-item-label svg * {
+  color: inherit !important;
+  fill: currentColor !important;
+  opacity: 0.7 !important;
 }
 
 .dark tbody td {
@@ -124,11 +154,12 @@
 
 /* Table headers with gradient */
 .dark th {
-  color: #a5b4fc !important;
-  font-weight: 600 !important;
+  color: #c7d2fe !important; /* Lighter Indigo for better contrast */
+  font-weight: 700 !important;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 11px !important;
+  letter-spacing: 0.1em;
+  font-size: 10px !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== FORMS ===== */
@@ -281,28 +312,20 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.2) !important;
 }
 
-/* Modal positioning fix for dark mode */
+/* Modal positioning fix for dark mode - relaxed to avoid overriding component styles */
 .dark .fixed.inset-0 {
-  position: fixed !important;
-  top: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  z-index: 50 !important;
 }
 
-/* Ensure modal content is centered */
 .dark .fixed.inset-0 > div {
   margin: auto !important;
-  transform: none !important;
   position: relative !important;
 }
 
 /* Modal backdrop overlay */
-.dark .bg-slate-900\\/20 {
+.dark .bg-slate-900\/20 {
   background-color: rgba(0, 0, 0, 0.85) !important;
   display: flex !important;
   align-items: center !important;
@@ -315,29 +338,48 @@
   border: 1px solid rgba(99, 102, 241, 0.15) !important;
 }
 
-/* Force perfect centering for modal containers in dark mode */
+/* Force perfect centering for modal containers in dark mode - relaxed */
 .dark .fixed.inset-0.flex.items-center.justify-center {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  margin: 0 !important;
-  padding: 16px !important;
-  box-sizing: border-box !important;
 }
 
-/* Modal content centering */
+/* Modal content centering - relaxed to allow component-level control */
 .dark .fixed.inset-0.flex.items-center.justify-center > div {
   margin: 0 auto !important;
-  max-width: 1024px !important;
-  width: 100% !important;
-  display: block !important;
   position: relative !important;
 }
 
-.dark .bg-slate-50\/50 {
-  background: linear-gradient(135deg, #111827 0%, #0f1419 100%) !important;
+/* Harmonized backgrounds for expanded table sections - Deeper Premium Style */
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/30,
+.dark .bg-blue-50\/30,
+.dark .bg-white:not(header):not(aside) {
+  background: linear-gradient(135deg, rgba(13, 17, 26, 0.98) 0%, rgba(26, 31, 46, 0.98) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  border-top: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: inset 0 4px 25px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+  position: relative;
+}
+
+/* Floating Card shadow for nested tables to give "Pretty" depth */
+.dark .bg-slate-50\/50 > div,
+.dark .bg-blue-50\/30 > div,
+.dark .rounded-2xl {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Nested table headers - Sharp & Contrasty */
+.dark .bg-slate-100\/50,
+.dark .bg-blue-100\/50,
+.dark .bg-blue-50\/50,
+.dark .bg-slate-200,
+.dark .bg-slate-50,
+.dark table thead {
+  background: linear-gradient(to right, #1a202c 0%, #0d1117 100%) !important;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Modal header backgrounds should remain as they are for color coding but with better contrast */
@@ -498,7 +540,7 @@
 }
 
 /* Hover effects for modal close buttons */
-.dark .hover\\:bg-black\\/5:hover {
+.dark .hover\\:bg-black\/5:hover {
   background: rgba(99, 102, 241, 0.1) !important;
 }
 
@@ -535,17 +577,20 @@
   color: #93c5fd !important;
 }
 
-/* Activity progress bars */
+/* Activity progress bars - with glow */
 .dark .bg-green-500 {
-  background: #22c55e !important;
+  background: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
 }
 
 .dark .bg-blue-500 {
   background: #3b82f6 !important;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3) !important;
 }
 
 .dark .bg-red-500 {
   background: #ef4444 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
 }
 
 /* Activity category badge backgrounds */
@@ -605,10 +650,9 @@
   border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
 }
 
-/* Expanded content backgrounds */
+/* Expanded content backgrounds - Handled by consolidated rule above */
 .dark .bg-blue-50\/30 {
-  background: linear-gradient(135deg, rgba(15, 20, 25, 0.8) 0%, rgba(17, 24, 39, 0.9) 100%) !important;
-  border-color: rgba(99, 102, 241, 0.15) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
 }
 
 /* Nested table headers in expanded rows */
