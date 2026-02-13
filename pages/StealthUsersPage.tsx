@@ -205,7 +205,7 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
                 <th className="px-6 py-4 text-left">Type</th>
                 <th className="px-6 py-4 text-left">Status</th>
                 <th className="px-6 py-4 text-left">Tracked Days</th>
-                <th className="px-6 py-4 text-left">Total Time</th>
+                <th className="px-6 py-4 text-left">Total Time Tracked</th>
                 {userType === 'admin' && <th className="px-6 py-4 text-left text-right">Actions</th>}
               </tr>
             </thead>
