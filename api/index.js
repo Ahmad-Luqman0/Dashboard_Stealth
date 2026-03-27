@@ -696,14 +696,17 @@ app.post('/api/register-user-from-session', async (req, res) => {
         
         const newUser = userResult.rows[0];
         
-        // Update stealth sessions to link to new user
+        // Update all stealth sessions with same device_id or windows_username and user_id IS NULL
         await query(
             `UPDATE stealth_sessions 
              SET user_id = $1, user_in_db = true 
-             WHERE session_id = $2`,
-            [newUser.id, session_id]
+             WHERE (session_id = $2
+                 OR (device_id IS NOT NULL AND device_id = $3)
+                 OR (windows_username IS NOT NULL AND windows_username = $4))
+               AND (user_id IS NULL OR user_id = 0)`,
+            [newUser.id, session_id, device_id || null, windows_username || null]
         );
-        
+
         // Create device mapping if device_id exists
         if (device_id) {
             await query(
@@ -713,7 +716,7 @@ app.post('/api/register-user-from-session', async (req, res) => {
                 [newUser.id, device_id, session_id]
             );
         }
-        
+
         // Create Windows username mapping if provided
         if (windows_username) {
             await query(
@@ -723,7 +726,7 @@ app.post('/api/register-user-from-session', async (req, res) => {
                 [newUser.id, windows_username]
             );
         }
-        
+
         await query('COMMIT');
         res.json({ success: true, user: newUser });
     } catch (err) {
@@ -748,14 +751,17 @@ app.post('/api/map-user-to-session', async (req, res) => {
     try {
         await query('BEGIN');
         
-        // Update stealth sessions to link to user
+        // Update all stealth sessions with same device_id or windows_username and user_id IS NULL
         await query(
             `UPDATE stealth_sessions 
              SET user_id = $1, user_in_db = true 
-             WHERE session_id = $2`,
-            [user_id, session_id]
+             WHERE (session_id = $2
+                 OR (device_id IS NOT NULL AND device_id = $3)
+                 OR (windows_username IS NOT NULL AND windows_username = $4))
+               AND (user_id IS NULL OR user_id = 0)`,
+            [user_id, session_id, device_id || null, windows_username || null]
         );
-        
+
         // Create device mapping if device_id exists
         if (device_id) {
             await query(
