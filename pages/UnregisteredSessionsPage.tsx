@@ -52,6 +52,7 @@ const UnregisteredSessionsPage: React.FC = () => {
  const [selectedSession, setSelectedSession] = useState<UnregisteredSession | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const [registerForm, setRegisterForm] = useState({
     name: '',
@@ -97,56 +98,72 @@ const UnregisteredSessionsPage: React.FC = () => {
 
   const handleRegisterUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || !selectedSession) return;
+    
+    setSubmitting(true);
     setError('');
     setSuccess('');
 
-    if (!selectedSession) return;
+    try {
+      const result = await db.registerUserFromSession({
+        name: registerForm.name,
+        email: registerForm.email,
+        phone: registerForm.phone || undefined,
+        usertype_id: parseInt(registerForm.usertype_id),
+        session_id: selectedSession.session_id,
+        device_id: selectedSession.device_id || undefined,
+        windows_username: selectedSession.windows_username || undefined
+      });
 
-    const result = await db.registerUserFromSession({
-      name: registerForm.name,
-      email: registerForm.email,
-      phone: registerForm.phone || undefined,
-      usertype_id: parseInt(registerForm.usertype_id),
-      session_id: selectedSession.session_id,
-      device_id: selectedSession.device_id || undefined,
-      windows_username: selectedSession.windows_username || undefined
-    });
-
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setSuccess('User registered successfully');
-      setShowRegisterModal(false);
-      setRegisterForm({ name: '', email: '', phone: '', usertype_id: '' });
-      setSelectedSession(null);
-      loadData();
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSuccess('User registered successfully');
+        setShowRegisterModal(false);
+        setRegisterForm({ name: '', email: '', phone: '', usertype_id: '' });
+        setSelectedSession(null);
+        loadData();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred during registration');
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleMapUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || !selectedSession) return;
+
+    setSubmitting(true);
     setError('');
     setSuccess('');
 
-    if (!selectedSession) return;
+    try {
+      const result = await db.mapUserToSession({
+        user_id: parseInt(mapForm.user_id),
+        session_id: selectedSession.session_id,
+        device_id: selectedSession.device_id || undefined,
+        windows_username: selectedSession.windows_username || undefined
+      });
 
-    const result = await db.mapUserToSession({
-      user_id: parseInt(mapForm.user_id),
-      session_id: selectedSession.session_id,
-      device_id: selectedSession.device_id || undefined,
-      windows_username: selectedSession.windows_username || undefined
-    });
-
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setSuccess('User mapped to session successfully');
-      setShowMapModal(false);
-      setMapForm({ user_id: '' });
-      setSelectedSession(null);
-      loadData();
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSuccess('User mapped to session successfully');
+        setShowMapModal(false);
+        setMapForm({ user_id: '' });
+        setSelectedSession(null);
+        loadData();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred during mapping');
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -514,9 +531,10 @@ const UnregisteredSessionsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
+                  disabled={submitting}
+                  className={`flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Register User
+                  {submitting ? 'Registering...' : 'Register User'}
                 </button>
               </div>
             </form>
@@ -587,9 +605,10 @@ const UnregisteredSessionsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
+                  disabled={submitting}
+                  className={`flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Map User
+                  {submitting ? 'Mapping...' : 'Map User'}
                 </button>
               </div>
             </form>
