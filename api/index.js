@@ -731,11 +731,19 @@ app.post('/api/register-user-from-session', async (req, res) => {
         res.json({ success: true, user: newUser });
     } catch (err) {
         await query('ROLLBACK');
-        console.error(err);
+        console.error("Registration error:", err);
+        
         if (err.code === '23505') { // Unique violation
-            res.status(400).json({ error: 'Email already exists' });
+            const detail = err.detail || "";
+            if (detail.includes('email')) {
+                res.status(400).json({ error: 'Email already exists' });
+            } else if (detail.includes('windows_username')) {
+                res.status(400).json({ error: 'Windows username is already mapped to another user' });
+            } else {
+                res.status(400).json({ error: 'A record with these details already exists' });
+            }
         } else {
-            res.status(500).json({ error: 'Failed to register user' });
+            res.status(500).json({ error: 'Failed to register user: ' + (err.message || 'Unknown error') });
         }
     }
 });
