@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataService';
-import { Plus, Trash2, X, Clock, User as UserIcon, Mail, Phone as PhoneIcon, Key, UserCheck } from 'lucide-react';
+import { Plus, Trash2, X, Clock, User as UserIcon, Mail, Phone as PhoneIcon, UserCheck } from 'lucide-react';
 import { useTimezone } from '../contexts/TimezoneContext';
 
 interface StealthUser {
@@ -37,7 +37,6 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
     phone: '',
     usertype_id: '',
     shift_start: '09:00:00',
@@ -115,7 +114,6 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
         setFormData({
           name: '',
           email: '',
-          password: '',
           phone: '',
           usertype_id: '',
           shift_start: '09:00:00',
@@ -376,16 +374,6 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
                         onChange={e => setFormData({...formData, breaktime_end: e.target.value})}
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">INITIAL PASSWORD</label>
-                    <input 
-                      type="password" 
-                      placeholder="Default: changeme123"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                      value={formData.password}
-                      onChange={e => setFormData({...formData, password: e.target.value})}
-                    />
                   </div>
                 </div>
               </div>
