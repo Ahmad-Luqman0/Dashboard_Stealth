@@ -759,13 +759,12 @@ app.post('/api/map-user-to-session', async (req, res) => {
     try {
         await query('BEGIN');
         
-        // Update all stealth sessions with same device_id or windows_username and user_id IS NULL
+        // Update the specific session AND all other sessions with matching device_id AND windows_username
         await query(
             `UPDATE stealth_sessions 
              SET user_id = $1, user_in_db = true 
-             WHERE (session_id = $2
-                 OR (device_id IS NOT NULL AND device_id = $3)
-                 OR (windows_username IS NOT NULL AND windows_username = $4))
+             WHERE (device_id IS NOT NULL AND device_id = $3
+                    AND windows_username IS NOT NULL AND windows_username = $4)
                AND (user_id IS NULL OR user_id = 0)`,
             [user_id, session_id, device_id || null, windows_username || null]
         );
