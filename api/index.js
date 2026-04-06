@@ -86,7 +86,7 @@ app.get('/api/users', async (req, res) => {
 
 // Add new monitored user with shift
 app.post('/api/users', async (req, res) => {
-  const { name, email, phone, usertype_id, password, shift_start, shift_end, breaktime_start, breaktime_end } = req.body;
+    const { name, email, phone, usertype_id, shift_start, shift_end, breaktime_start, breaktime_end } = req.body;
   
   if (!name || !email || !usertype_id) {
     return res.status(400).json({ error: 'Name, email, and usertype_id are required' });
@@ -97,10 +97,10 @@ app.post('/api/users', async (req, res) => {
     
     // 1. Insert into users table
     const userResult = await query(
-      `INSERT INTO users (name, email, phone, password, usertype_id, status) 
-       VALUES ($1, $2, $3, $4, $5, 'active') 
+            `INSERT INTO users (name, email, phone, usertype_id, status) 
+             VALUES ($1, $2, $3, $4, 'active') 
        RETURNING id`,
-      [name, email, phone || null, password || 'changeme123', usertype_id]
+            [name, email, phone || null, usertype_id]
     );
     
     const userId = userResult.rows[0].id;
@@ -686,12 +686,12 @@ app.post('/api/register-user-from-session', async (req, res) => {
         // Start transaction
         await query('BEGIN');
         
-        // Insert user with a default password
+        // Insert user
         const userResult = await query(
-            `INSERT INTO users (name, email, phone, password, usertype_id, status) 
-             VALUES ($1, $2, $3, $4, $5, 'active') 
+            `INSERT INTO users (name, email, phone, usertype_id, status) 
+             VALUES ($1, $2, $3, $4, 'active') 
              RETURNING *`,
-            [name, email, phone || null, 'changeme123', usertype_id]
+            [name, email, phone || null, usertype_id]
         );
         
         const newUser = userResult.rows[0];
