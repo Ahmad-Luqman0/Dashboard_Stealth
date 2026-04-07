@@ -763,10 +763,10 @@ app.post('/api/map-user-to-session', async (req, res) => {
         await query(
             `UPDATE stealth_sessions 
              SET user_id = $1, user_in_db = true 
-             WHERE (device_id IS NOT NULL AND device_id = $3
-                    AND windows_username IS NOT NULL AND windows_username = $4)
+             WHERE (device_id IS NOT NULL AND device_id = $2
+                    AND windows_username IS NOT NULL AND windows_username = $3)
                AND (user_id IS NULL OR user_id = 0)`,
-            [user_id, session_id, device_id || null, windows_username || null]
+            [user_id, device_id || null, windows_username || null]
         );
 
         // Create device mapping if device_id exists
