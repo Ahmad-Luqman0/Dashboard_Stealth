@@ -31,8 +31,8 @@ const ExecutiveDashboard: React.FC = () => {
         'Very Low': [] as any[]
     };
     userBreakdown.forEach(user => {
-         const tracked = Number(user.tracked);
-         const idle = Number(user.idle);
+         const tracked = Number(user.total_time || user.tracked || 0);
+         const idle = Number(user.idle_time || user.idle || 0);
          const breakTime = Number(user.break_time || 0);
          const activeTime = tracked - idle - breakTime;
          const progress = tracked > 0 ? (activeTime / tracked) * 100 : 0;
@@ -48,12 +48,12 @@ const ExecutiveDashboard: React.FC = () => {
   // Derived: Top Idle Users
   const topIdleUsers = React.useMemo(() => {
       return Array.isArray(userBreakdown) ? [...userBreakdown]
-          .filter(u => u && Number(u.idle) > 0)
-          .sort((a, b) => Number(b.idle) - Number(a.idle))
+          .filter(u => u && Number(u.idle_time || u.idle || 0) > 0)
+          .sort((a, b) => Number(b.idle_time || b.idle || 0) - Number(a.idle_time || a.idle || 0))
           .map(u => ({
               name: u.name,
               category: 'User', 
-              total_time: u.idle,
+              total_time: u.idle_time || u.idle,
               ...u
           })) : [];
   }, [userBreakdown]);
@@ -75,11 +75,11 @@ const ExecutiveDashboard: React.FC = () => {
   /* User Detail Modal Logic (reuse card) */
   const renderUserDetail = (user: any) => {
         if (!user) return null;
-        const tracked = Number(user.tracked);
-        const idle = Number(user.idle);
+        const tracked = Number(user.total_time || user.tracked || 0);
+        const idle = Number(user.idle_time || user.idle || 0);
         const breakTime = Number(user.break_time || 0);
         const active = tracked - idle - breakTime; 
-        const productive = Number(user.productive);
+        const productive = Number(user.productive_time || user.productive || 0);
         const progress = tracked > 0 ? (active / tracked) * 100 : 0;
 
          return (
@@ -732,11 +732,11 @@ const ExecutiveDashboard: React.FC = () => {
                 <div className="p-6 overflow-y-auto bg-slate-50/50">
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {selectedCategory.users.map((user, idx) => {
-                             const tracked = Number(user.tracked);
-                             const idle = Number(user.idle);
+                             const tracked = Number(user.total_time || user.tracked || 0);
+                             const idle = Number(user.idle_time || user.idle || 0);
                              const breakTime = Number(user.break_time || 0);
                              const active = tracked - idle - breakTime; 
-                             const productive = Number(user.productive);
+                             const productive = Number(user.productive_time || user.productive || 0);
                              
                              // Activity Level = (Active Time / Total Tracked Time) * 100
                              const progress = tracked > 0 ? (active / tracked) * 100 : 0;
