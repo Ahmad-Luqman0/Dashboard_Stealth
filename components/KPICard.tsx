@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 interface KPICardProps {
   label: string;
   mainValue: string;
-  subValue: string;
+  subValue?: string;
   tooltip?: string;
   trend?: 'up' | 'down';
   trendColor?: 'green' | 'red' | 'blue';
