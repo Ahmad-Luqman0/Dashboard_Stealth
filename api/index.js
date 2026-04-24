@@ -396,19 +396,21 @@ app.get('/api/summary/user-breakdown', async (req, res) => {
         // We select ALL users active in this period
         const result = await query(`
             SELECT 
+                u.id as user_id,
                 u.name,
-                COALESCE(SUM(ss.productive_time), 0) as productive,
-                COALESCE(SUM(ss.idle_time), 0) as idle,
-                COALESCE(SUM(ss.wasted_time), 0) as wasted,
-                COALESCE(SUM(ss.neutral_time), 0) as neutral,
-                COALESCE(SUM(ss.total_time), 0) as tracked,
+                u.email,
+                COALESCE(SUM(ss.productive_time), 0) as productive_time,
+                COALESCE(SUM(ss.idle_time), 0) as idle_time,
+                COALESCE(SUM(ss.wasted_time), 0) as unproductive_time,
+                COALESCE(SUM(ss.neutral_time), 0) as neutral_time,
+                COALESCE(SUM(ss.total_time), 0) as total_time,
                 COALESCE(SUM(ss.break_time), 0) as break_time
             FROM users u
             JOIN stealth_sessions ss ON u.id = ss.user_id
             WHERE ${dateFilter} ${shiftFilter} ${userFilter}
-            GROUP BY u.id, u.name
+            GROUP BY u.id, u.name, u.email
             HAVING SUM(ss.total_time) > 0
-            ORDER BY tracked DESC
+            ORDER BY COALESCE(SUM(ss.total_time), 0) DESC
         `);
         res.json(result.rows);
     } catch (err) {
