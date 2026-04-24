@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
 import { useTimezone } from '../contexts/TimezoneContext';
 import KPICard from '../components/KPICard';
+import UserMetricModal from '../components/UserMetricModal';
 import { Download, ExternalLink, RefreshCcw, Loader2 } from 'lucide-react';
 import { db } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
@@ -18,6 +19,8 @@ const SummaryDashboard: React.FC = () => {
   const [shifts, setShifts] = useState<any[]>([]);
   const [selectedShift, setSelectedShift] = useState('All');
   const [showDateModal, setShowDateModal] = useState(false);
+  const [showMetricModal, setShowMetricModal] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<'productive' | 'unproductive' | 'neutral' | 'idle' | 'total_time' | null>(null);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -126,6 +129,11 @@ const SummaryDashboard: React.FC = () => {
     };
     const rangeStr = `custom:${formatDate(start)}:${formatDate(end)}`;
     setSelectedRange(rangeStr);
+  };
+
+  const openMetricModal = (metric: 'productive' | 'unproductive' | 'neutral' | 'idle' | 'total_time') => {
+    setSelectedMetric(metric);
+    setShowMetricModal(true);
   };
 
   if (loading) {
@@ -387,7 +395,22 @@ const SummaryDashboard: React.FC = () => {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiList.map((k, i) => (
+        {kpiList.map((k, i) => {
+          // Add click handlers to specific metrics
+          let onClick: (() => void) | undefined = undefined;
+          if (k.label === "Total time tracked") {
+            onClick = () => openMetricModal('total_time');
+          } else if (k.label === "Productive time") {
+            onClick = () => openMetricModal('productive');
+          } else if (k.label === "Unproductive time") {
+            onClick = () => openMetricModal('unproductive');
+          } else if (k.label === "Neutral & unrated time") {
+            onClick = () => openMetricModal('neutral');
+          } else if (k.label === "Idle time") {
+            onClick = () => openMetricModal('idle');
+          }
+
+          return (
             <KPICard 
                 key={i} 
                 label={k.label} 
@@ -396,8 +419,10 @@ const SummaryDashboard: React.FC = () => {
                 trend={k.trend as any}
                 trendColor={k.trendColor as any}
                 tooltip={k.tooltip}
+                onClick={onClick}
             />
-        ))}
+          );
+        })}
       </div>
 
       {/* Top Productive Apps */}
@@ -601,6 +626,14 @@ const SummaryDashboard: React.FC = () => {
           </div>
       </div>
 
+      {/* User Metric Modal */}
+      <UserMetricModal 
+        isOpen={showMetricModal}
+        onClose={() => setShowMetricModal(false)}
+        metricType={selectedMetric}
+        selectedRange={selectedRange}
+        selectedShift={selectedShift}
+      />
     </div>
   );
 };
