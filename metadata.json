@@ -1,0 +1,5 @@
+{
+  "name": "Immense Code Analytics Dashboard",
+  "description": "A comprehensive executive and operational dashboard for tracking user productivity, session activities, and system usage based on PostgreSQL schema.",
+  "requestFramePermissions": []
+}
