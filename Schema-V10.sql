@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS dashboard_users (
       (type)::text = any (
         (
           array[
+            'super admin'::character varying,
             'admin'::character varying,
             'manager'::character varying,
             'supervisor'::character varying,

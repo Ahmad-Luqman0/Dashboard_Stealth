@@ -39,6 +39,7 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -57,7 +58,25 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
     loadUsers();
     loadUserTypes();
     db.getCompanies().then(setAvailableCompanies);
+
+    const stored = localStorage.getItem('er_session');
+    if (stored) {
+      try {
+        const sessionData = JSON.parse(stored);
+        setCurrentUser(sessionData.user || sessionData);
+      } catch (e) {
+        console.error('Failed to parse session', e);
+      }
+    }
   }, []);
+
+  // Default company for non-super admins
+  useEffect(() => {
+      if (showAddModal && currentUser?.type !== 'super admin' && currentUser?.companies?.length > 0 && !editingUserId) {
+          const defaultCompany = currentUser.companies[0] === 'All' ? '' : currentUser.companies[0];
+          setFormData(prev => ({ ...prev, company: defaultCompany }));
+      }
+  }, [showAddModal, currentUser, editingUserId]);
 
   const loadUserTypes = async () => {
     try {
@@ -248,7 +267,7 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage users monitored by the stealth engine</p>
         </div>
-        {userType === 'admin' && (
+        {(userType === 'admin' || userType === 'super admin') && (
           <button 
             onClick={() => setShowAddModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-200 dark:shadow-none font-semibold text-sm"
@@ -321,7 +340,7 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
                     <td className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">
                       {formatTime(user.total_time)}
                     </td>
-                    {userType === 'admin' && (
+                    {(userType === 'admin' || userType === 'super admin') && (
                       <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                          <button 
                           onClick={() => handleEditClick(user)}
@@ -424,7 +443,8 @@ const StealthUsersPage = ({ userType }: StealthUsersPageProps) => {
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Company</label>
                     <select 
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                      disabled={currentUser?.type !== 'super admin'}
+                      className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none ${currentUser?.type !== 'super admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       value={formData.company}
                       onChange={e => setFormData({...formData, company: e.target.value})}
                     >

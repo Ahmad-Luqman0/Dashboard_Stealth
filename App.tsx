@@ -109,17 +109,17 @@ const App: React.FC = () => {
       case Page.SUMMARY: return <SummaryDashboard />;
       case Page.DASHBOARD: return <MainDashboard />;
       case Page.STEALTH_USERS:
-        // Only allow admin users to view stealth users
-        return user?.type === 'admin' ? <StealthUsersPage userType={user?.type} /> : <ExecutiveDashboard />;
+        // Only allow admin/super admin users to view stealth users
+        return (user?.type === 'admin' || user?.type === 'super admin') ? <StealthUsersPage userType={user?.type} /> : <ExecutiveDashboard />;
       case Page.USERS:
         // Only allow non-employees to view dashboard users
         return user?.type !== 'employee' ? <UsersPage /> : <ExecutiveDashboard />;
       case Page.DEVICE_MAPPINGS: 
-        // Only allow admin users to view device mappings
-        return user?.type === 'admin' ? <DeviceMappingsPage /> : <ExecutiveDashboard />;
+        // Only allow admin/super admin users to view device mappings
+        return (user?.type === 'admin' || user?.type === 'super admin') ? <DeviceMappingsPage /> : <ExecutiveDashboard />;
       case Page.UNREGISTERED_SESSIONS:
-        // Only allow admin users to view unregistered sessions
-        return user?.type === 'admin' ? <UnregisteredSessionsPage /> : <ExecutiveDashboard />;
+        // Only allow admin/super admin users to view unregistered sessions
+        return (user?.type === 'admin' || user?.type === 'super admin') ? <UnregisteredSessionsPage /> : <ExecutiveDashboard />;
       case Page.PROFILE: return <ProfilePage />;
       default: return <MainDashboard />;
     }

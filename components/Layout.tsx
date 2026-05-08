@@ -57,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
   ];
 
   // Add Registered Stealth Users menu item only for admin users at position 4
-  const adminStealthUsers = userType === 'admin' ? [
+  const adminStealthUsers = (userType === 'admin' || userType === 'super admin') ? [
     { id: 'stealth-users', label: 'Stealth Users', icon: Users }
   ] : [];
 
@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPath, onNavigate, onLo
   ] : [];
 
   // Additional admin-only items
-  const adminMenuItems = userType === 'admin' ? [
+  const adminMenuItems = (userType === 'admin' || userType === 'super admin') ? [
     { id: 'device-mappings', label: 'Device Mappings', icon: Server },
     { id: 'unregistered-sessions', label: 'Unregistered Sessions', icon: UserCog }
   ] : [];

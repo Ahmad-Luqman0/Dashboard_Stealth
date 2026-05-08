@@ -9,10 +9,12 @@ const UsersPage: React.FC = () => {
   
   // Admin logic state
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [resetModal, setResetModal] = useState<{open: boolean, userId: any, name: string}>({ open: false, userId: null, name: '' });
   const [companyModal, setCompanyModal] = useState<{open: boolean, userId: any, name: string, companies: string[]}>({ open: false, userId: null, name: '', companies: [] });
-  const [newPass, setNewPass] = useState('');
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
+
+  // Edit User state
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -31,7 +33,6 @@ const UsersPage: React.FC = () => {
     if (stored) {
       try {
         const sessionData = JSON.parse(stored);
-        // Handle new session format { user, expiresAt }
         setCurrentUser(sessionData.user || sessionData);
       } catch (e) {
         console.error('Failed to parse session', e);
@@ -49,26 +50,30 @@ const UsersPage: React.FC = () => {
       }
   };
 
-  const handleResetPass = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!resetModal.userId) return;
-      const res = await db.updateDashboardUser(resetModal.userId, { newPassword: newPass });
-      if (res.error) alert(res.error);
-      else {
-          alert('Password updated successfully');
-          setResetModal({ open: false, userId: null, name: '' });
-          setNewPass('');
-      }
-  };
+      if (!editingUser) return;
+      
+      const payload: any = {
+          name: editingUser.name,
+          username: editingUser.username,
+          email: editingUser.email,
+          phone: editingUser.phone,
+          type: editingUser.type,
+          status: editingUser.status,
+          companies: editingUser.companies
+      };
 
-  const handleUpdateCompanies = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!companyModal.userId) return;
-      const res = await db.updateDashboardUser(companyModal.userId, { companies: companyModal.companies });
+      if (editingUser.newPassword) {
+          payload.password = editingUser.newPassword;
+      }
+
+      const res = await db.updateDashboardUser(editingUser.id, payload);
       if (res.error) alert(res.error);
       else {
-          alert('Companies updated successfully');
-          setCompanyModal({ open: false, userId: null, name: '', companies: [] });
+          alert('User updated successfully');
+          setShowEditModal(false);
+          setEditingUser(null);
           fetchUsers();
       }
   };
@@ -96,6 +101,14 @@ const UsersPage: React.FC = () => {
       companies: ['All']
   });
 
+  // Default company for non-super admins
+  useEffect(() => {
+      if (isModalOpen && currentUser?.type !== 'super admin' && currentUser?.companies?.length > 0) {
+          const defaultCompany = currentUser.companies[0] === 'All' ? 'All' : currentUser.companies[0];
+          setFormData(prev => ({ ...prev, companies: [defaultCompany] }));
+      }
+  }, [isModalOpen, currentUser]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -122,19 +135,23 @@ const UsersPage: React.FC = () => {
       }
   };
 
+  const canEdit = currentUser?.type === 'super admin' || currentUser?.type === 'admin';
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20 relative">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Users</h1>
         </div>
-        <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-200 hover:-translate-y-1 active:scale-95 text-sm"
-        >
-          <Plus size={18} strokeWidth={2.5} />
-          Add New User
-        </button>
+        {canEdit && (
+            <button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-200 hover:-translate-y-1 active:scale-95 text-sm"
+            >
+              <Plus size={18} strokeWidth={2.5} />
+              Add New User
+            </button>
+        )}
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -182,13 +199,10 @@ const UsersPage: React.FC = () => {
                        <span className="text-[11px] font-bold text-slate-500 uppercase">{user.type}</span>
                     </td>
                     <td className="px-6 py-4">
-                       {currentUser?.type === 'admin' && (
+                       {canEdit && (
                           <div className="flex items-center gap-2">
-                             <button onClick={() => setResetModal({ open: true, userId: user.id, name: user.name })} className="text-slate-400 hover:text-blue-600 transition-colors" title="Change Password">
-                               <Lock size={16} />
-                             </button>
-                             <button onClick={() => setCompanyModal({ open: true, userId: user.id, name: user.name, companies: Array.isArray(user.companies) ? user.companies : [user.companies] })} className="text-slate-400 hover:text-green-600 transition-colors" title="Manage Companies">
-                               <Building2 size={16} />
+                             <button onClick={() => { setEditingUser({ ...user, newPassword: '' }); setShowEditModal(true); }} className="text-slate-400 hover:text-blue-600 transition-colors" title="Edit User">
+                               <Edit2 size={16} />
                              </button>
                              {/* Prevent deleting self */}
                              {currentUser.id !== user.id && (
@@ -276,63 +290,49 @@ const UsersPage: React.FC = () => {
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone (Optional)</label>
                             <input name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" placeholder="+1 234..." />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role</label>
-                                <select 
-                                    name="type" 
-                                    value={formData.type} 
-                                    onChange={handleInputChange} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                                >
-                                    <option value="admin">Admin</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="employee">Employee</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
-                                <select 
-                                    name="status" 
-                                    value={formData.status} 
-                                    onChange={handleInputChange} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Companies</label>
-                            <div className="relative">
-                                <select 
-                                    multiple
-                                    name="companies"
-                                    value={Array.isArray(formData.companies) ? formData.companies : [formData.companies]}
-                                    onChange={(e) => {
-                                        const target = e.target as HTMLSelectElement;
-                                        const values = Array.from(target.selectedOptions, option => option.value);
-                                        let finalValues = values;
-                                        if (values.includes('All') && values.length > 1) {
-                                            if (formData.companies.includes('All')) {
-                                                finalValues = values.filter(v => v !== 'All');
-                                            } else {
-                                                finalValues = ['All'];
-                                            }
-                                        }
-                                        setFormData({ ...formData, companies: finalValues as any });
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium min-h-[80px]"
-                                >
-                                    <option value="All">All Companies</option>
-                                    {availableCompanies.map(c => (
-                                        <option key={c.id} value={c.name}>{c.name}</option>
-                                    ))}
-                                </select>
-                                <p className="text-[10px] text-slate-400 mt-1 italic">Hold Ctrl (Windows) or Command (Mac) to select multiple companies</p>
-                            </div>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role</label>
+                            <select 
+                                name="type" 
+                                value={formData.type} 
+                                onChange={handleInputChange} 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                            >
+                                {currentUser?.type === 'super admin' && <option value="super admin">Super Admin</option>}
+                                <option value="admin">Admin</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="employee">Employee</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                            <select 
+                                name="status" 
+                                value={formData.status} 
+                                onChange={handleInputChange} 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                            >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Company</label>
+                            <select 
+                                disabled={currentUser?.type !== 'super admin'}
+                                name="companies"
+                                value={formData.companies[0] || 'All'}
+                                onChange={(e) => setFormData({ ...formData, companies: [e.target.value] })}
+                                className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium ${currentUser?.type !== 'super admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <option value="All">All Companies</option>
+                                {availableCompanies.map(c => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -353,85 +353,96 @@ const UsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Reset Password Modal */}
-      {resetModal.open && (
+      {/* Edit User Modal */}
+      {showEditModal && editingUser && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 className="text-lg font-bold text-slate-800">Reset Password</h2>
-                    <button onClick={() => setResetModal({ open: false, userId: null, name: '' })} className="text-slate-400 hover:text-slate-600">✕</button>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 className="text-xl font-bold text-slate-800">Edit User: {editingUser.name}</h2>
+                    <button onClick={() => { setShowEditModal(false); setEditingUser(null); }} className="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
-                <div className="p-6">
-                    <p className="text-sm text-slate-500 mb-4">Set new password for <strong>{resetModal.name}</strong></p>
-                    <form onSubmit={handleResetPass} className="space-y-4">
-                        <input 
-                            type="password"
-                            required
-                            value={newPass}
-                            onChange={(e) => setNewPass(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium" 
-                            placeholder="New Password" 
-                        />
-                         <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setResetModal({ open: false, userId: null, name: '' })} className="flex-1 px-4 py-2 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-xs">Cancel</button>
-                            <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 text-xs">Update</button>
+                
+                <form onSubmit={handleEditSubmit} className="p-8 space-y-5">
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name</label>
+                            <input required value={editingUser.name} onChange={e => setEditingUser({ ...editingUser, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" />
                         </div>
-                    </form>
-                </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Username</label>
+                            <input required value={editingUser.username} onChange={e => setEditingUser({ ...editingUser, username: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
+                        <input type="email" required value={editingUser.email} onChange={e => setEditingUser({ ...editingUser, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</label>
+                            <input value={editingUser.phone || ''} onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role</label>
+                            <select 
+                                value={editingUser.type} 
+                                onChange={e => setEditingUser({ ...editingUser, type: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                            >
+                                {currentUser?.type === 'super admin' && <option value="super admin">Super Admin</option>}
+                                <option value="admin">Admin</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="employee">Employee</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                            <select 
+                                value={editingUser.status} 
+                                onChange={e => setEditingUser({ ...editingUser, status: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                            >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Company</label>
+                            <select 
+                                disabled={currentUser?.type !== 'super admin'}
+                                value={editingUser.companies[0] || 'All'}
+                                onChange={(e) => setEditingUser({ ...editingUser, companies: [e.target.value] })}
+                                className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium ${currentUser?.type !== 'super admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <option value="All">All Companies</option>
+                                {availableCompanies.map(c => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">New Password (leave blank to keep current)</label>
+                        <input type="password" value={editingUser.newPassword} onChange={e => setEditingUser({ ...editingUser, newPassword: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" placeholder="••••••••" />
+                    </div>
+
+                    <div className="pt-4 flex gap-3">
+                        <button type="button" onClick={() => { setShowEditModal(false); setEditingUser(null); }} className="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-sm">Cancel</button>
+                        <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all transform active:scale-95 text-sm">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
       )}
 
-      {/* Manage Companies Modal */}
-      {companyModal.open && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 className="text-lg font-bold text-slate-800">Manage Companies</h2>
-                    <button onClick={() => setCompanyModal({ open: false, userId: null, name: '', companies: [] })} className="text-slate-400 hover:text-slate-600">✕</button>
-                </div>
-                <div className="p-6">
-                    <p className="text-sm text-slate-500 mb-4">Assign companies for <strong>{companyModal.name}</strong></p>
-                    <form onSubmit={handleUpdateCompanies} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Companies</label>
-                            <div className="relative">
-                                <select 
-                                    multiple
-                                    name="companies"
-                                    value={companyModal.companies}
-                                    onChange={(e) => {
-                                        const target = e.target as HTMLSelectElement;
-                                        const values = Array.from(target.selectedOptions, option => option.value);
-                                        let finalValues = values;
-                                        if (values.includes('All') && values.length > 1) {
-                                            if (companyModal.companies.includes('All')) {
-                                                finalValues = values.filter(v => v !== 'All');
-                                            } else {
-                                                finalValues = ['All'];
-                                            }
-                                        }
-                                        setCompanyModal({ ...companyModal, companies: finalValues });
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium min-h-[120px]"
-                                >
-                                    <option value="All">All Companies</option>
-                                    {availableCompanies.map(c => (
-                                        <option key={c.id} value={c.name}>{c.name}</option>
-                                    ))}
-                                </select>
-                                <p className="text-[10px] text-slate-400 mt-1 italic">Hold Ctrl (Windows) or Command (Mac) to select multiple companies</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setCompanyModal({ open: false, userId: null, name: '', companies: [] })} className="flex-1 px-4 py-2 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-xs">Cancel</button>
-                            <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 text-xs">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-      )}
     </div>
   );
 };

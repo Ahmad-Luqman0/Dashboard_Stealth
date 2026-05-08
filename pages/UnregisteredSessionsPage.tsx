@@ -56,6 +56,7 @@ const UnregisteredSessionsPage: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [registerForm, setRegisterForm] = useState({
     name: '',
@@ -81,7 +82,25 @@ const UnregisteredSessionsPage: React.FC = () => {
   useEffect(() => {
     loadData();
     db.getCompanies().then(setAvailableCompanies);
+
+    const stored = localStorage.getItem('er_session');
+    if (stored) {
+      try {
+        const sessionData = JSON.parse(stored);
+        setCurrentUser(sessionData.user || sessionData);
+      } catch (e) {
+        console.error('Failed to parse session', e);
+      }
+    }
   }, [activeTab]);
+
+  // Default company for non-super admins in register form
+  useEffect(() => {
+      if (showRegisterModal && currentUser?.type !== 'super admin' && currentUser?.companies?.length > 0) {
+          const defaultCompany = currentUser.companies[0] === 'All' ? '' : currentUser.companies[0];
+          setRegisterForm(prev => ({ ...prev, company: defaultCompany }));
+      }
+  }, [showRegisterModal, currentUser]);
 
   const loadData = async () => {
     setLoading(true);
@@ -412,7 +431,7 @@ const UnregisteredSessionsPage: React.FC = () => {
                         {new Date(session.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-2 justify-end transition-opacity">
                           <button
                             onClick={() => {
                               setSelectedSession(session);
@@ -582,9 +601,10 @@ const UnregisteredSessionsPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Company</label>
                 <select
+                  disabled={currentUser?.type !== 'super admin'}
                   value={registerForm.company}
                   onChange={(e) => setRegisterForm({ ...registerForm, company: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className={`w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all ${currentUser?.type !== 'super admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <option value="">Select company</option>
                   {availableCompanies.map(c => (

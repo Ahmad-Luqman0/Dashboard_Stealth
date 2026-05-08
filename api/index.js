@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { query } from './db.js';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 dotenv.config();
 
 const app = express();
@@ -27,8 +28,9 @@ app.get('/api/dashboard-users', async (req, res) => {
         status, 
         type,
         companies
-      FROM dashboard_users
-      ORDER BY created_at DESC
+      FROM dashboard_users u
+      WHERE 1=1 ${getDashboardUserCompanyFilter(req.query.companies, 'u')}
+      ORDER BY u.created_at DESC
     `);
         res.json(result.rows);
     } catch (err) {
@@ -48,11 +50,13 @@ app.post('/api/dashboard-users', async (req, res) => {
             companiesArray = companies.split(',').map(c => c.trim()).filter(c => c);
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const result = await query(
             `INSERT INTO dashboard_users (name, username, email, password, phone, type, status, companies) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
-            [name, username, email, password, phone, type, status, companiesArray]
+            [name, username, email, hashedPassword, phone, type, status, companiesArray]
         );
         res.json(result.rows[0]);
     } catch (err) {
@@ -147,8 +151,9 @@ app.post('/api/users', async (req, res) => {
 app.delete('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     try {
+        const companyFilter = getCompanyFilter(req.query.companies);
         // Note: Database schema should have CASCADE deletes for user_shifts and stealth_sessions
-        const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+        const result = await query(`DELETE FROM users u WHERE u.id = $1 ${companyFilter} RETURNING u.id`, [id]);
         if (result.rows.length > 0) {
             res.json({ success: true });
         } else {
@@ -173,10 +178,11 @@ app.put('/api/users/:id', async (req, res) => {
         await query('BEGIN');
 
         // 1. Update users table
+        const companyFilter = getCompanyFilter(req.query.companies);
         const userResult = await query(
             `UPDATE users 
              SET name = $1, email = $2, phone = $3, usertype_id = $4, company = $5, updated_at = NOW()
-             WHERE id = $6 
+             WHERE id = $6 ${companyFilter.replace('u.', '')}
              RETURNING *`,
             [name, email, phone || null, usertype_id, company || null, id]
         );
@@ -278,6 +284,17 @@ const getCompanyFilter = (companiesQuery, alias = 'u') => {
     // Use ANY with array of strings
     const companiesList = companies.map(c => `'${c.replace(/'/g, "''")}'`).join(',');
     return ` AND ${alias}.company = ANY(ARRAY[${companiesList}])`;
+};
+
+// Helper for Dashboard User Company filtering (array overlap)
+const getDashboardUserCompanyFilter = (companiesQuery, alias = 'u') => {
+    if (!companiesQuery || companiesQuery === '' || companiesQuery === 'All') return '';
+    const companies = companiesQuery.split(',').map(c => c.trim()).filter(c => c);
+    if (companies.includes('All')) return '';
+    if (companies.length === 0) return '';
+
+    const companiesList = companies.map(c => `'${c.replace(/'/g, "''")}'`).join(',');
+    return ` AND ${alias}.companies && ARRAY[${companiesList}]`;
 };
 
 
@@ -598,8 +615,20 @@ app.post('/api/login', async (req, res) => {
         if (result.rows.length > 0) {
             const user = result.rows[0];
 
-            if (user.password === password) {
-                const { password, ...userWithoutPassword } = user;
+            let isMatch = false;
+            try {
+                isMatch = await bcrypt.compare(password, user.password);
+            } catch (e) {
+                isMatch = false;
+            }
+
+            // Fallback for existing plain-text passwords
+            if (!isMatch && user.password === password) {
+                isMatch = true;
+            }
+
+            if (isMatch) {
+                const { password: userPassword, ...userWithoutPassword } = user;
                 // Check if active
                 if (user.status !== 'active') {
                     return res.status(401).json({ success: false, error: 'Account is inactive' });
@@ -659,34 +688,58 @@ app.delete('/api/companies/:id', async (req, res) => {
 // Update Dashboard User Profile (Phone, Password)
 app.put('/api/dashboard-users/:id', async (req, res) => {
     const { id } = req.params;
-    const { phone, password, newPassword } = req.body;
+    const { name, username, email, phone, type, status, companies, newPassword } = req.body;
 
     try {
         let queryStr = 'UPDATE dashboard_users SET updated_at = NOW()';
         const params = [id];
         let paramIdx = 2;
 
+        if (name) {
+            queryStr += `, name = $${paramIdx}`;
+            params.push(name);
+            paramIdx++;
+        }
+        if (username) {
+            queryStr += `, username = $${paramIdx}`;
+            params.push(username);
+            paramIdx++;
+        }
+        if (email) {
+            queryStr += `, email = $${paramIdx}`;
+            params.push(email);
+            paramIdx++;
+        }
         if (phone !== undefined) {
             queryStr += `, phone = $${paramIdx}`;
             params.push(phone);
             paramIdx++;
         }
-
-        if (newPassword) {
-            queryStr += `, password = $${paramIdx}`;
-            params.push(newPassword);
+        if (type) {
+            queryStr += `, type = $${paramIdx}`;
+            params.push(type);
             paramIdx++;
         }
-
-        if (req.body.companies !== undefined) {
+        if (status) {
+            queryStr += `, status = $${paramIdx}`;
+            params.push(status);
+            paramIdx++;
+        }
+        if (companies !== undefined) {
             let companiesArray = ['All'];
-            if (Array.isArray(req.body.companies)) {
-                companiesArray = req.body.companies;
-            } else if (req.body.companies && typeof req.body.companies === 'string') {
-                companiesArray = req.body.companies.split(',').map(c => c.trim()).filter(c => c);
+            if (Array.isArray(companies)) {
+                companiesArray = companies;
+            } else if (companies && typeof companies === 'string') {
+                companiesArray = companies.split(',').map(c => c.trim()).filter(c => c);
             }
             queryStr += `, companies = $${paramIdx}`;
             params.push(companiesArray);
+            paramIdx++;
+        }
+        if (newPassword) {
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            queryStr += `, password = $${paramIdx}`;
+            params.push(hashedPassword);
             paramIdx++;
         }
 
@@ -736,6 +789,7 @@ app.get('/api/device-mappings', async (req, res) => {
                 u.email as user_email
             FROM user_device_mappings udm
             JOIN users u ON udm.user_id = u.id
+            WHERE 1=1 ${getCompanyFilter(req.query.companies, 'u')}
             ORDER BY udm.created_at DESC
         `);
         res.json(result.rows);
@@ -793,10 +847,8 @@ app.delete('/api/device-mappings/:id', async (req, res) => {
 // Get stealth sessions where user_in_db = false and not mapped to any device
 app.get('/api/unregistered-sessions', async (req, res) => {
     const { companies } = req.query;
-    // Only show unregistered sessions to users with "All" company access
-    if (companies && companies !== 'All' && !companies.split(',').includes('All')) {
-        return res.json([]);
-    }
+    // Allow admins to view unregistered sessions so they can claim them.
+    // The frontend will ensure they can only register them to their own company.
 
     try {
         const result = await query(`
@@ -973,6 +1025,7 @@ app.get('/api/windows-username-mappings', async (req, res) => {
                 u.email as user_email
             FROM windows_username_mappings wum
             JOIN users u ON wum.user_id = u.id
+            WHERE 1=1 ${getCompanyFilter(req.query.companies, 'u')}
             ORDER BY wum.created_at DESC
         `);
         res.json(result.rows);

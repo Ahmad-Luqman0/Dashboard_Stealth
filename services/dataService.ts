@@ -152,7 +152,7 @@ export class DataService {
 
   async getDashboardUsers() {
     try {
-      const response = await fetch(`${API_BASE}/dashboard-users`);
+      const response = await fetch(`${API_BASE}/dashboard-users?${this.getCompaniesParam().replace('&', '')}`);
       const data = await response.json();
       return data;
     } catch (e) {
@@ -233,7 +233,7 @@ export class DataService {
 
   async updateUser(id: number | string, userData: any) {
     try {
-      const response = await fetch(`${API_BASE}/users/${id}`, {
+      const response = await fetch(`${API_BASE}/users/${id}?${this.getCompaniesParam().replace('&', '')}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ export class DataService {
 
   async deleteUser(id: number | string) {
     try {
-      const response = await fetch(`${API_BASE}/users/${id}`, {
+      const response = await fetch(`${API_BASE}/users/${id}?${this.getCompaniesParam().replace('&', '')}`, {
         method: 'DELETE',
       });
       return await response.json();
@@ -261,7 +261,7 @@ export class DataService {
 
   async getDeviceMappings() {
     try {
-      const response = await fetch(`${API_BASE}/device-mappings`);
+      const response = await fetch(`${API_BASE}/device-mappings?${this.getCompaniesParam().replace('&', '')}`);
       const data = await response.json();
       return data;
     } catch (e) {
@@ -350,7 +350,7 @@ export class DataService {
 
   async getWindowsUsernameMappings() {
     try {
-      const response = await fetch(`${API_BASE}/windows-username-mappings`);
+      const response = await fetch(`${API_BASE}/windows-username-mappings?${this.getCompaniesParam().replace('&', '')}`);
       return await response.json();
     } catch (e) {
       console.error(e);
