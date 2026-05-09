@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useExport } from '../contexts/ExportContext';
 import { useTimezone } from '../contexts/TimezoneContext';
 import KPICard from '../components/KPICard';
-import { Download, ExternalLink, RefreshCcw, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, RefreshCcw, Loader2, X } from 'lucide-react';
 import { db } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import DateRangeModal from '../components/DateRangeModal';
@@ -18,6 +18,8 @@ const SummaryDashboard: React.FC = () => {
   const [shifts, setShifts] = useState<any[]>([]);
   const [selectedShift, setSelectedShift] = useState('All');
   const [showDateModal, setShowDateModal] = useState(false);
+  const [userBreakdown, setUserBreakdown] = useState<any[]>([]);
+  const [selectedMetricPopup, setSelectedMetricPopup] = useState<{label: string, key: string} | null>(null);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -27,18 +29,20 @@ const SummaryDashboard: React.FC = () => {
           db.getShifts().then(setShifts);
       }
 
-      const [summary, prodApps, unprodApps, activity, charts] = await Promise.all([
+      const [summary, prodApps, unprodApps, activity, charts, breakdown] = await Promise.all([
         db.getSummaryKPIs(selectedRange, selectedShift === 'All' ? undefined : selectedShift),
         db.getTopApps('productive', selectedRange, selectedShift === 'All' ? undefined : selectedShift),
         db.getTopApps('unproductive', selectedRange, selectedShift === 'All' ? undefined : selectedShift),
         db.getUserActivityStats(selectedRange, selectedShift === 'All' ? undefined : selectedShift),
-        db.getChartData(selectedRange, selectedShift === 'All' ? undefined : selectedShift)
+        db.getChartData(selectedRange, selectedShift === 'All' ? undefined : selectedShift),
+        db.getUserActivityBreakdown(selectedRange, selectedShift === 'All' ? undefined : selectedShift)
       ]);
       setData(summary);
       setProductiveApps(prodApps);
       setUnproductiveApps(unprodApps);
       setUserActivity(activity);
       setChartData(charts);
+      setUserBreakdown(breakdown);
     } catch (e) {
       console.error(e);
     }
@@ -229,42 +233,48 @@ const SummaryDashboard: React.FC = () => {
         main: formatDuration(data?.total_time), 
         sub: formatDuration(targetTotal),
         ...getTrend(data?.total_time, targetTotal),
-        tooltip: getTooltip(data?.total_time, targetTotal)
+        tooltip: getTooltip(data?.total_time, targetTotal),
+        onClick: () => setSelectedMetricPopup({ label: "Total time tracked", key: "tracked" })
     },
     { 
         label: "Productive time", 
         main: formatDuration(data?.productive_time), 
         sub: formatDuration(targetProductive),
         ...getTrend(data?.productive_time, targetProductive),
-        tooltip: getTooltip(data?.productive_time, targetProductive)
+        tooltip: getTooltip(data?.productive_time, targetProductive),
+        onClick: () => setSelectedMetricPopup({ label: "Productive time", key: "productive" })
     },
     { 
         label: "Unproductive time", 
         main: formatDuration(data?.unproductive_time), 
         sub: formatDuration(targetUnproductive),
         ...getTrend(data?.unproductive_time, targetUnproductive),
-        tooltip: getTooltip(data?.unproductive_time, targetUnproductive)
+        tooltip: getTooltip(data?.unproductive_time, targetUnproductive),
+        onClick: () => setSelectedMetricPopup({ label: "Unproductive time", key: "wasted" })
     },
     { 
         label: "Neutral & unrated time", 
         main: formatDuration(data?.neutral_time), 
         sub: formatDuration(targetNeutral),
         ...getTrend(data?.neutral_time, targetNeutral),
-        tooltip: getTooltip(data?.neutral_time, targetNeutral)
+        tooltip: getTooltip(data?.neutral_time, targetNeutral),
+        onClick: () => setSelectedMetricPopup({ label: "Neutral & unrated time", key: "neutral" })
     },
     { 
         label: "Idle time", 
         main: formatDuration(data?.idle_time), 
         sub: formatDuration(targetIdle),
         ...getTrend(data?.idle_time, targetIdle),
-        tooltip: getTooltip(data?.idle_time, targetIdle)
+        tooltip: getTooltip(data?.idle_time, targetIdle),
+        onClick: () => setSelectedMetricPopup({ label: "Idle time", key: "idle" })
     },
     { 
         label: "Break time", 
         main: formatDuration(data?.break_time), 
         sub: formatDuration(targetBreak),
         ...getTrend(data?.break_time, targetBreak),
-        tooltip: getTooltip(data?.break_time, targetBreak)
+        tooltip: getTooltip(data?.break_time, targetBreak),
+        onClick: () => setSelectedMetricPopup({ label: "Break time", key: "break_time" })
     },
     { 
         label: "Total active users", 
@@ -396,6 +406,7 @@ const SummaryDashboard: React.FC = () => {
                 trend={k.trend as any}
                 trendColor={k.trendColor as any}
                 tooltip={k.tooltip}
+                onClick={(k as any).onClick}
             />
         ))}
       </div>
@@ -600,6 +611,87 @@ const SummaryDashboard: React.FC = () => {
               </div>
           </div>
       </div>
+
+      {/* Metric Details Popup */}
+      {selectedMetricPopup && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Users by {selectedMetricPopup.label}</h2>
+                <p className="text-sm text-slate-500 mt-1">Total users: {userBreakdown.length}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedMetricPopup(null)}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50 space-y-4">
+              {userBreakdown
+                .sort((a, b) => Number(b[selectedMetricPopup.key]) - Number(a[selectedMetricPopup.key]))
+                .map((user, i) => {
+                  let styles = { text: 'text-blue-600', bg: 'bg-blue-500', label: 'Tracked' };
+                  switch(selectedMetricPopup.key) {
+                      case 'productive': styles = { text: 'text-green-600', bg: 'bg-green-500', label: 'Productive' }; break;
+                      case 'wasted': styles = { text: 'text-red-500', bg: 'bg-red-500', label: 'Unproductive' }; break;
+                      case 'neutral': styles = { text: 'text-slate-500', bg: 'bg-slate-500', label: 'Neutral' }; break;
+                      case 'idle': styles = { text: 'text-orange-500', bg: 'bg-orange-500', label: 'Idle' }; break;
+                      case 'break_time': styles = { text: 'text-purple-500', bg: 'bg-purple-500', label: 'Break' }; break;
+                  }
+                  
+                  const isTracked = selectedMetricPopup.key === 'tracked';
+                  const percentage = user.tracked > 0 ? ((Number(user[selectedMetricPopup.key]) / Number(user.tracked)) * 100).toFixed(1) : "0.0";
+
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-bold text-lg text-slate-800">{user.name}</h3>
+                        <span className="text-xl font-bold text-slate-400">{percentage}%</span>
+                      </div>
+                      <p className="text-sm text-slate-500 mb-6">
+                        {styles.label} Level: <span className="font-bold text-slate-700">{percentage}%</span>
+                      </p>
+
+                      <div className="flex gap-8 mb-6">
+                        {/* Clicked Metric Time */}
+                        {!isTracked && (
+                            <div>
+                                <span className={`block text-xs font-bold mb-1 ${styles.text}`}>{styles.label}</span>
+                                <span className="text-sm font-medium text-slate-700">{formatDuration(user[selectedMetricPopup.key])}</span>
+                            </div>
+                        )}
+                        
+                        {/* Tracked Time */}
+                        <div>
+                            <span className="block text-xs font-bold text-blue-600 mb-1">Tracked</span>
+                            <span className="text-sm font-medium text-slate-700 bg-blue-50 px-2 py-0.5 rounded">{formatDuration(user.tracked)}</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full">
+                        <div className="flex justify-between text-[10px] font-bold text-blue-500 uppercase mb-1.5">
+                            <span className="bg-blue-50 px-1.5 py-0.5 rounded">{styles.label} PROGRESS</span>
+                            <span className="bg-blue-50 px-1.5 py-0.5 rounded">{percentage}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${styles.bg}`} style={{ width: `${percentage}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {userBreakdown.length === 0 && (
+                <div className="text-center py-8 text-slate-500 bg-white rounded-xl border border-slate-100">
+                  No data available for this metric.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

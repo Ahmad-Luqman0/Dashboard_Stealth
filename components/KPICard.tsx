@@ -8,14 +8,18 @@ interface KPICardProps {
   tooltip?: string;
   trend?: 'up' | 'down';
   trendColor?: 'green' | 'red' | 'blue';
+  onClick?: () => void;
 }
 
-const KPICard: React.FC<KPICardProps> = ({ label, mainValue, subValue, tooltip, trend, trendColor = 'green' }) => {
+const KPICard: React.FC<KPICardProps> = ({ label, mainValue, subValue, tooltip, trend, trendColor = 'green', onClick }) => {
   const Icon = trend === 'down' ? TrendingDown : TrendingUp;
   const iconClass = trendColor === 'red' ? 'text-red-500' : trendColor === 'blue' ? 'text-blue-500' : 'text-green-500';
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center relative group hover:shadow-md transition-shadow">
+    <div 
+      className={`bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center relative group hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer hover:border-blue-300' : ''}`}
+      onClick={onClick}
+    >
       {tooltip && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded shadow-sm border border-slate-200 font-medium pointer-events-none z-10 whitespace-nowrap">
            {tooltip}

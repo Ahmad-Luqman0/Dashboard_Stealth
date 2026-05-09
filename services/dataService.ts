@@ -64,37 +64,37 @@ export class DataService {
 
   async getUserActivityStats(range: string = 'yesterday', shift?: string) {
     try {
-        const shiftParam = shift ? `&shift=${shift}` : '';
-        const response = await fetch(`${API_BASE}/summary/users-activity?range=${range}${shiftParam}${this.getCompaniesParam()}`);
-        return await response.json();
+      const shiftParam = shift ? `&shift=${shift}` : '';
+      const response = await fetch(`${API_BASE}/summary/users-activity?range=${range}${shiftParam}${this.getCompaniesParam()}`);
+      return await response.json();
     } catch (e) {
-        console.error(e);
-        return [];
+      console.error(e);
+      return [];
     }
   }
 
   async getUserActivityBreakdown(range: string = 'yesterday', shift?: string, userId?: string | number) {
     try {
-        const shiftParam = shift ? `&shift=${shift}` : '';
-        const userParam = userId ? `&user=${userId}` : '';
-        const response = await fetch(`${API_BASE}/summary/user-breakdown?range=${range}${shiftParam}${userParam}${this.getCompaniesParam()}`);
-        return await response.json();
+      const shiftParam = shift ? `&shift=${shift}` : '';
+      const userParam = userId ? `&user=${userId}` : '';
+      const response = await fetch(`${API_BASE}/summary/user-breakdown?range=${range}${shiftParam}${userParam}${this.getCompaniesParam()}`);
+      return await response.json();
     } catch (e) {
-        console.error(e);
-        return [];
+      console.error(e);
+      return [];
     }
   }
 
   async getChartData(range: string = 'yesterday', shift?: string) {
-      try {
-          const shiftParam = shift ? `&shift=${shift}` : '';
-          const response = await fetch(`${API_BASE}/summary/charts?range=${range}${shiftParam}${this.getCompaniesParam()}`);
-          return await response.json();
-      } catch (e) {
-          console.error(e);
-          return { unproductive: [], trends: [] };
-      }
-  } 
+    try {
+      const shiftParam = shift ? `&shift=${shift}` : '';
+      const response = await fetch(`${API_BASE}/summary/charts?range=${range}${shiftParam}${this.getCompaniesParam()}`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { unproductive: [], trends: [] };
+    }
+  }
 
   async getDashboardData(range: string, shift?: string, userId?: string | number, timezone?: string) {
     try {
@@ -110,13 +110,13 @@ export class DataService {
   }
 
   async getShifts() {
-      try {
-          const response = await fetch(`${API_BASE}/shifts`);
-          return await response.json();
-      } catch (e) {
-          console.error(e);
-          return [];
-      }
+    try {
+      const response = await fetch(`${API_BASE}/shifts`);
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
   }
 
   async getCompanies(): Promise<any[]> {
@@ -132,21 +132,21 @@ export class DataService {
 
   async addCompany(name: string) {
     try {
-        const response = await fetch(`${API_BASE}/companies`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        return await response.json();
+      const response = await fetch(`${API_BASE}/companies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      return await response.json();
     } catch (e) { return { error: 'Failed to add company' }; }
   }
 
   async deleteCompany(id: number) {
     try {
-        const response = await fetch(`${API_BASE}/companies/${id}`, {
-            method: 'DELETE'
-        });
-        return await response.json();
+      const response = await fetch(`${API_BASE}/companies/${id}`, {
+        method: 'DELETE'
+      });
+      return await response.json();
     } catch (e) { return { error: 'Failed to delete company' }; }
   }
 
@@ -166,41 +166,41 @@ export class DataService {
       const response = await fetch(`${API_BASE}/dashboard-users`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(user)
       });
       const data = await response.json();
       return data;
     } catch (e) {
-        console.error(e);
-        return { error: 'Connection failure' };
+      console.error(e);
+      return { error: 'Connection failure' };
     }
   }
 
   async updateDashboardUser(id: number | string, data: any) {
     try {
-        const response = await fetch(`${API_BASE}/dashboard-users/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        return await response.json();
+      const response = await fetch(`${API_BASE}/dashboard-users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
     } catch (e) {
-        console.error(e);
-        return { error: 'Connection failure' };
+      console.error(e);
+      return { error: 'Connection failure' };
     }
   }
 
   async deleteDashboardUser(id: number | string) {
     try {
-        const response = await fetch(`${API_BASE}/dashboard-users/${id}`, {
-            method: 'DELETE'
-        });
-        return await response.json();
+      const response = await fetch(`${API_BASE}/dashboard-users/${id}`, {
+        method: 'DELETE'
+      });
+      return await response.json();
     } catch (e) {
-        console.error(e);
-        return { error: 'Connection failure' };
+      console.error(e);
+      return { error: 'Connection failure' };
     }
   }
 
@@ -307,14 +307,14 @@ export class DataService {
     }
   }
 
-  async registerUserFromSession(data: { 
-    name: string; 
-    email: string; 
-    phone?: string; 
-    usertype_id: number; 
-    company?: string; 
-    session_id: string; 
-    device_id?: string; 
+  async registerUserFromSession(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    usertype_id: number;
+    company?: string;
+    session_id: string;
+    device_id?: string;
     windows_username?: string;
     shift_start?: string;
     shift_end?: string;
